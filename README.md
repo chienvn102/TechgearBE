@@ -1,4 +1,4 @@
-# E-commerce Backend API
+# E-commerce Backend API (IN DEVELOPMENT)
 
 ## Mô tả dự án
 
