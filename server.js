@@ -1,0 +1,132 @@
+// server.js
+// Main server file 
+
+const express = require('express');
+const cors = require('cors');
+const { connectDB, createIndexes } = require('./config/database');
+const config = require('./config');
+const routes = require('./routes');
+
+// Import middleware
+const { errorHandler, notFound } = require('./middleware/errorHandler');
+const { securityHeaders, corsOptions, sanitizeInput, apiRateLimit } = require('./middleware/security');
+
+const app = express();
+
+// Trust proxy - for rate limiting behind reverse proxy
+app.set('trust proxy', 1);
+
+// Security middleware
+app.use(securityHeaders);
+
+// Serve static files (for uploaded images) with CORS - BEFORE main CORS
+app.use('/uploads', (req, res, next) => {
+  console.log(`📁 Static file request: ${req.method} ${req.originalUrl}`);
+  res.header('Access-Control-Allow-Origin', 'http://localhost:5000');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+  
+  next();
+}, express.static('public/uploads'));
+
+app.use(cors(corsOptions));
+app.use(sanitizeInput);
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate limiting for API routes
+app.use('/api', apiRateLimit);
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// API routes với prefix từ config
+app.use(config.API_PREFIX, routes);
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'E-commerce Backend API',
+    version: '1.0.0',
+    documentation: `${config.API_PREFIX}/info`,
+    health_check: `${config.API_PREFIX}/health`,
+    endpoints: {
+      auth: `${config.API_PREFIX}/auth`,
+      user_management: `${config.API_PREFIX}/user-management`,
+      products: `${config.API_PREFIX}/products`,
+      orders: `${config.API_PREFIX}/orders`
+    },
+    compliance: {
+      source: 'README_MongoDB.md',
+      rules: 'rule_backend.instructions.md',
+      database: config.DATABASE_NAME,
+      collections: 29
+    }
+  });
+});
+
+// 404 handler
+app.use(notFound);
+
+// Global error handler
+app.use(errorHandler);
+
+// Start server function
+const startServer = async () => {
+  try {
+    // Connect to database
+    await connectDB();
+    
+    // Create indexes theo README_MongoDB.md
+    await createIndexes();
+    
+    // Start server
+    const PORT = config.PORT;
+    const server = app.listen(PORT, () => {
+      console.log('===========================================');
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Environment: ${config.NODE_ENV}`);
+      console.log(`Database: ${config.DATABASE_NAME}`);
+      console.log(`API Prefix: ${config.API_PREFIX}`);
+    });
+
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received, shutting down gracefully...');
+      server.close(() => {
+        console.log('Process terminated');
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGINT', () => {
+      console.log('SIGINT received, shutting down gracefully...');
+      server.close(() => {
+        console.log('Process terminated');
+        process.exit(0);
+      });
+    });
+
+  } catch (error) {
+    console.error('Failed to start server:', error.message);
+    process.exit(1);
+  }
+};
+
+// Start the server
+startServer();
+
+module.exports = app;
