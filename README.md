@@ -123,7 +123,6 @@ Hệ thống sử dụng 30 collections MongoDB:
 
 ### User Roles
 - `ADMIN`: Quản trị viên cao cấp
-- `MANAGER`: Quản lý cửa hàng
 - `STAFF`: Nhân viên
 - `USER`: Khách hàng thường
 
