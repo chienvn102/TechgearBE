@@ -43,7 +43,7 @@ PORT=3000
 API_PREFIX=/api/v1
 
 # MongoDB Configuration
-MONGODB_URI=mongodb+srv://chienvn102:chienvn102@sanshiliu.xdy1ogg.mongodb.net/?retryWrites=true&w=majority&appName=sanshiliu
+MONGODB_URI=
 DATABASE_NAME=ecommerce_system
 
 # JWT Configuration
@@ -51,9 +51,9 @@ JWT_SECRET=your-super-secret-jwt-key
 JWT_EXPIRES_IN=7d
 
 # Cloudinary Configuration
-CLOUDINARY_CLOUD_NAME=dqpo9h5s2
-CLOUDINARY_API_KEY=992736514345364
-CLOUDINARY_API_SECRET=2k7t5_qpL3CQgJ0WS9AV4YL8j7Y
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
 
 # Storage Configuration
 STORAGE_METHOD=cloudinary
