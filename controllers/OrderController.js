@@ -45,10 +45,21 @@ class OrderController {
       .skip(skip)
       .limit(limit);
 
+    // Populate order_info for each order để hiển thị trạng thái đơn hàng
+    const ordersWithInfo = await Promise.all(
+      orders.map(async (order) => {
+        const orderInfo = await OrderInfo.findOne({ od_id: order._id }).select('oi_id of_state');
+        return {
+          ...order.toObject(),
+          order_info: orderInfo
+        };
+      })
+    );
+
     res.status(200).json({
       success: true,
       data: {
-        orders,
+        orders: ordersWithInfo,
         pagination: {
           page,
           limit,
@@ -75,9 +86,17 @@ class OrderController {
       });
     }
 
+    // Get order_info để hiển thị trạng thái đơn hàng
+    const orderInfo = await OrderInfo.findOne({ od_id: order._id }).select('oi_id of_state');
+    
+    const orderWithInfo = {
+      ...order.toObject(),
+      order_info: orderInfo
+    };
+
     res.status(200).json({
       success: true,
-      data: { order }
+      data: { order: orderWithInfo }
     });
   });
 
@@ -414,11 +433,11 @@ class OrderController {
       });
     }
 
-    const validStates = ['PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED'];
+    const validStates = ['ORDER_SUCCESS', 'TRANSFER_TO_SHIPPING', 'SHIPPING', 'DELIVERED', 'CANCELLED'];
     if (!validStates.includes(of_state)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid order state'
+        message: 'Invalid order state. Valid states are: ' + validStates.join(', ')
       });
     }
 

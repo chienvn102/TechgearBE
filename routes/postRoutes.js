@@ -24,7 +24,7 @@ const createPostValidation = [
     .notEmpty()
     .withMessage('post_content is required'),
   body('post_img')
-    .optional()
+    .optional({ checkFalsy: true })
     .isURL()
     .withMessage('post_img must be a valid URL'),
   validateRequest
@@ -44,7 +44,7 @@ const updatePostValidation = [
     .notEmpty()
     .withMessage('post_content cannot be empty'),
   body('post_img')
-    .optional()
+    .optional({ checkFalsy: true })
     .isURL()
     .withMessage('post_img must be a valid URL'),
   validateRequest
@@ -89,22 +89,38 @@ router.get('/:id',
 // Protected routes (require authentication and authorization)
 router.post('/', 
   authenticateToken,
-  authorize(['ADMIN', 'MANAGER']),
+  authorize('ADMIN', 'MANAGER'),
   createPostValidation,
   PostController.createPost
 );
 
+router.put('/by-post-id/:post_id', 
+  authenticateToken,
+  authorize('ADMIN', 'MANAGER'),
+  param('post_id').notEmpty().withMessage('post_id is required'),
+  updatePostValidation,
+  PostController.updatePostByPostId
+);
+
 router.put('/:id', 
   authenticateToken,
-  authorize(['ADMIN', 'MANAGER']),
+  authorize('ADMIN', 'MANAGER'),
   validateObjectId,
   updatePostValidation,
   PostController.updatePost
 );
 
+router.delete('/by-post-id/:post_id', 
+  authenticateToken,
+  authorize('ADMIN', 'MANAGER'),
+  param('post_id').notEmpty().withMessage('post_id is required'),
+  validateRequest,
+  PostController.deletePostByPostId
+);
+
 router.delete('/:id', 
   authenticateToken,
-  authorize(['ADMIN', 'MANAGER']),
+  authorize('ADMIN', 'MANAGER'),
   validateObjectId,
   PostController.deletePost
 );

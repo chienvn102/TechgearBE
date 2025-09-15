@@ -157,8 +157,8 @@ router.put('/:id/status', [
   body('of_state')
     .notEmpty()
     .withMessage('Order state is required')
-    .isIn(['PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED'])
-    .withMessage('Order state must be one of: PENDING, PROCESSING, SHIPPING, DELIVERED, CANCELLED'),
+    .isIn(['ORDER_SUCCESS', 'TRANSFER_TO_SHIPPING', 'SHIPPING', 'DELIVERED', 'CANCELLED'])
+    .withMessage('Order state must be one of: ORDER_SUCCESS, TRANSFER_TO_SHIPPING, SHIPPING, DELIVERED, CANCELLED'),
   validateRequest
 ], OrderController.updateOrderStatus);
 

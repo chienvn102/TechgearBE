@@ -74,13 +74,18 @@ class CustomerController {
       totalSpent: 0
     };
 
+    // Get customer addresses
+    const addresses = await CustomerAddress.find({ customer_id: customer._id })
+      .sort({ _id: 1 }); // First address is default according to business rules
+
     res.status(200).json({
       success: true,
       data: { 
         customer: {
           ...customer.toObject(),
           total_orders: stats.totalOrders,
-          total_spent: stats.totalSpent
+          total_spent: stats.totalSpent,
+          addresses: addresses
         }
       }
     });

@@ -20,7 +20,7 @@ const orderInfoSchema = new mongoose.Schema({
     required: true,
     trim: true,
     uppercase: true,
-    enum: ['PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED']
+    enum: ['ORDER_SUCCESS', 'TRANSFER_TO_SHIPPING', 'SHIPPING', 'DELIVERED', 'CANCELLED']
   }
 }, {
   collection: 'order_info', // Tên collection chính xác theo rule

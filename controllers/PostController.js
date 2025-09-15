@@ -125,6 +125,52 @@ class PostController {
     });
   });
 
+  // PUT /api/v1/posts/by-post-id/:post_id - Update post by post_id
+  static updatePostByPostId = asyncHandler(async (req, res) => {
+    const { post_id } = req.params;
+    const { 
+      post_id: new_post_id,
+      post_img,
+      post_title, 
+      post_content
+    } = req.body;
+
+    const post = await Post.findOne({ post_id });
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found'
+      });
+    }
+
+    // Check if new post_id conflicts with existing posts
+    if (new_post_id && new_post_id !== post.post_id) {
+      const existingPost = await Post.findOne({ post_id: new_post_id });
+      if (existingPost) {
+        return res.status(400).json({
+          success: false,
+          message: 'Post with this post_id already exists',
+          errors: [{ field: 'post_id', message: 'post_id must be unique' }]
+        });
+      }
+    }
+
+    // Update fields
+    if (new_post_id) post.post_id = new_post_id;
+    if (post_img !== undefined) post.post_img = post_img;
+    if (post_title) post.post_title = post_title;
+    if (post_content) post.post_content = post_content;
+
+    await post.save();
+
+    res.status(200).json({
+      success: true,
+      data: { post },
+      message: 'Post updated successfully'
+    });
+  });
+
   // PUT /api/v1/posts/:id - Update post
   static updatePost = asyncHandler(async (req, res) => {
     const { id } = req.params;
@@ -171,25 +217,77 @@ class PostController {
     });
   });
 
+  // DELETE /api/v1/posts/by-post-id/:post_id - Delete post by post_id
+  static deletePostByPostId = asyncHandler(async (req, res) => {
+    const { post_id } = req.params;
+    
+    console.log('🗑️ DELETE POST BY POST_ID REQUEST - post_id:', post_id);
+    
+    try {
+      const post = await Post.findOne({ post_id });
+      console.log('🔍 Found post:', post ? 'YES' : 'NO');
+
+      if (!post) {
+        console.log('❌ Post not found for post_id:', post_id);
+        return res.status(404).json({
+          success: false,
+          message: 'Post not found'
+        });
+      }
+
+      console.log('🚀 Deleting post:', post.post_title);
+      await Post.findByIdAndDelete(post._id);
+      console.log('✅ Post deleted successfully');
+
+      res.status(200).json({
+        success: true,
+        message: 'Post deleted successfully'
+      });
+    } catch (error) {
+      console.error('❌ DELETE POST BY POST_ID ERROR:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error deleting post',
+        error: error.message
+      });
+    }
+  });
+
   // DELETE /api/v1/posts/:id - Delete post
   static deletePost = asyncHandler(async (req, res) => {
     const { id } = req.params;
     
-    const post = await Post.findById(id);
+    console.log('🗑️ DELETE POST REQUEST - ID:', id);
+    console.log('🗑️ ID type:', typeof id, 'Length:', id.length);
+    
+    try {
+      const post = await Post.findById(id);
+      console.log('🔍 Found post:', post ? 'YES' : 'NO');
 
-    if (!post) {
-      return res.status(404).json({
+      if (!post) {
+        console.log('❌ Post not found for ID:', id);
+        return res.status(404).json({
+          success: false,
+          message: 'Post not found'
+        });
+      }
+
+      console.log('🚀 Deleting post:', post.post_title);
+      await Post.findByIdAndDelete(id);
+      console.log('✅ Post deleted successfully');
+
+      res.status(200).json({
+        success: true,
+        message: 'Post deleted successfully'
+      });
+    } catch (error) {
+      console.error('❌ DELETE POST ERROR:', error);
+      res.status(500).json({
         success: false,
-        message: 'Post not found'
+        message: 'Error deleting post',
+        error: error.message
       });
     }
-
-    await Post.findByIdAndDelete(id);
-
-    res.status(200).json({
-      success: true,
-      message: 'Post deleted successfully'
-    });
   });
 
   // GET /api/v1/posts/search - Search posts

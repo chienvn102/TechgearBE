@@ -21,6 +21,7 @@ const roleRoutes = require('./roleRoutes');
 const notificationRoutes = require('./notificationRoutes');
 const voucherRoutes = require('./voucherRoutes');
 const customerRoutes = require('./customerRoutes');
+const userCustomerRoutes = require('./userCustomerRoutes');
 const categoryRoutes = require('./categoryRoutes');
 
 
@@ -83,6 +84,7 @@ router.get('/info', (req, res) => {
         notifications: `${API_PREFIX}/notifications`,
         vouchers: `${API_PREFIX}/vouchers`,
         customers: `${API_PREFIX}/customers`,
+        user_customers: `${API_PREFIX}/user-customers`,
         categories: `${API_PREFIX}/categories`,
         audit_trail: `${API_PREFIX}/audit-trail`,
         order_info: `${API_PREFIX}/order-info`,
@@ -139,6 +141,7 @@ router.use('/roles', roleRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/vouchers', voucherRoutes);
 router.use('/customers', customerRoutes);
+router.use('/user-customers', userCustomerRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/banners', bannerRoutes);
 router.use('/payment-methods', paymentMethodRoutes);

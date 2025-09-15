@@ -216,4 +216,34 @@ router.delete('/product-type/:id',
   (req, res) => ProductTypeUploadController.deleteProductTypeImage(req, res)
 );
 
+// ===== POST IMAGE UPLOAD ROUTES =====
+
+const PostUploadController = require('../controllers/postUploadController');
+
+// ✅ UPLOAD POST IMAGE: Cloudinary integration
+// POST /api/v1/upload/post
+router.post('/post',
+  authenticateToken,
+  upload.single('image'),
+  body('post_id')
+    .notEmpty()
+    .withMessage('Post ID là bắt buộc'),
+  (req, res) => PostUploadController.uploadPostImage(req, res)
+);
+
+// ✅ GET POST IMAGE INFO
+// GET /api/v1/upload/post/:post_id/image-info
+router.get('/post/:post_id/image-info',
+  param('post_id').notEmpty().withMessage('Post ID là bắt buộc'),
+  (req, res) => PostUploadController.getPostWithImage(req, res)
+);
+
+// ✅ DELETE POST IMAGE
+// DELETE /api/v1/upload/post/:post_id
+router.delete('/post/:post_id',
+  authenticateToken,
+  param('post_id').notEmpty().withMessage('Post ID là bắt buộc'),
+  (req, res) => PostUploadController.deletePostImage(req, res)
+);
+
 module.exports = router;

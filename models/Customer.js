@@ -38,4 +38,15 @@ const customerSchema = new mongoose.Schema({
 customerSchema.index({ customer_id: 1 }, { unique: true });
 customerSchema.index({ email: 1 }, { unique: true });
 
+// Virtual field để lấy addresses của customer
+customerSchema.virtual('addresses', {
+  ref: 'CustomerAddress',
+  localField: '_id',
+  foreignField: 'customer_id'
+});
+
+// Đảm bảo virtual fields được include khi JSON
+customerSchema.set('toJSON', { virtuals: true });
+customerSchema.set('toObject', { virtuals: true });
+
 module.exports = mongoose.model('Customer', customerSchema);

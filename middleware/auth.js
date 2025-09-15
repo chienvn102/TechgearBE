@@ -111,15 +111,32 @@ const authorize = (...requiredRoles) => {
       }
 
       // Nếu là admin, kiểm tra role
+      console.log('🔍 Authorization Debug:');
+      console.log('- User:', req.user.username);
+      console.log('- User Type:', req.userType);
+      console.log('- User Role ID:', req.user.role_id);
+      console.log('- Required Roles:', requiredRoles);
+      
+      if (!req.user.role_id) {
+        console.log('❌ User has no role_id');
+        return res.status(403).json({
+          success: false,
+          message: 'User has no assigned role'
+        });
+      }
+      
       const userRole = req.user.role_id.role_id;
+      console.log('- User Role:', userRole);
       
       if (!requiredRoles.includes(userRole)) {
+        console.log('❌ Role mismatch');
         return res.status(403).json({
           success: false,
           message: 'Insufficient permissions'
         });
       }
 
+      console.log('✅ Authorization passed');
       next();
     } catch (error) {
       return res.status(500).json({

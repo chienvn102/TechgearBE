@@ -25,6 +25,15 @@ const postSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true
+  },
+  // Cloudinary fields for image management
+  cloudinary_public_id: {
+    type: String,
+    trim: true
+  },
+  cloudinary_secure_url: {
+    type: String,
+    trim: true
   }
 }, {
   collection: 'post', // Tên collection chính xác theo rule
