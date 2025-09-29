@@ -75,10 +75,17 @@ if (storageMethod === 'cloudinary') {
 // File filter cho security và validation
 const fileFilter = (req, file, cb) => {
   try {
+    console.log('🔍 Multer file filter - File received:');
+    console.log('  - Field name:', file.fieldname);
+    console.log('  - Original name:', file.originalname);
+    console.log('  - MIME type:', file.mimetype);
+    console.log('  - Size:', file.size);
+    
     // Chỉ chấp nhận image files
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
     if (!allowedTypes.includes(file.mimetype)) {
+      console.log('❌ File type not allowed:', file.mimetype);
       return cb(new Error('Chỉ chấp nhận file JPG, PNG, WebP'), false);
     }
 
@@ -87,11 +94,14 @@ const fileFilter = (req, file, cb) => {
     const fileExtension = path.extname(file.originalname).toLowerCase();
     
     if (!allowedExtensions.includes(fileExtension)) {
+      console.log('❌ File extension not allowed:', fileExtension);
       return cb(new Error('File extension không hợp lệ'), false);
     }
 
+    console.log('✅ File validation passed');
     cb(null, true);
   } catch (error) {
+    console.error('❌ File filter error:', error);
     cb(error, false);
   }
 };

@@ -30,6 +30,24 @@ class BannerController {
     const total = await Banner.countDocuments(query);
 
     const banners = await Banner.find(query)
+      .populate({
+        path: 'pd_id',
+        select: 'pd_name pd_id pd_price pd_quantity is_available',
+        populate: [
+          {
+            path: 'br_id',
+            select: 'br_name'
+          },
+          {
+            path: 'pdt_id',
+            select: 'pdt_name'
+          },
+          {
+            path: 'category_id', 
+            select: 'category_name'
+          }
+        ]
+      })
       .sort({ banner_order: 1, _id: -1 })
       .skip(skip)
       .limit(limit);
@@ -50,7 +68,25 @@ class BannerController {
 
   // GET /api/v1/banners/:id - Get banner by ID
   static getBannerById = asyncHandler(async (req, res) => {
-    const banner = await Banner.findById(req.params.id);
+    const banner = await Banner.findById(req.params.id)
+      .populate({
+        path: 'pd_id',
+        select: 'pd_name pd_id pd_price pd_quantity is_available',
+        populate: [
+          {
+            path: 'br_id',
+            select: 'br_name'
+          },
+          {
+            path: 'pdt_id',
+            select: 'pdt_name'
+          },
+          {
+            path: 'category_id', 
+            select: 'category_name'
+          }
+        ]
+      });
 
     if (!banner) {
       return res.status(404).json({
@@ -68,59 +104,52 @@ class BannerController {
   // POST /api/v1/banners - Create new banner
   static createBanner = asyncHandler(async (req, res) => {
     const {
-      banner_title,
-      banner_description,
+      pd_id,
       banner_image_url,
+      cloudinary_public_id,
       banner_link_url,
-      banner_type,
       banner_order,
-      start_date,
-      end_date,
       is_active = true
     } = req.body;
 
-    if (!banner_title || !banner_image_url || !banner_type) {
+    // Validate required fields
+    if (!pd_id || !banner_image_url) {
       return res.status(400).json({
         success: false,
-        message: 'Banner title, image URL and type are required'
+        message: 'Product ID and image URL are required'
       });
     }
 
-    // Validate banner type
-    const validTypes = ['homepage', 'category', 'product', 'promotion'];
-    if (!validTypes.includes(banner_type)) {
+    // Validate product exists
+    const { Product } = require('../models');
+    const product = await Product.findById(pd_id);
+    if (!product) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid banner type'
+        message: 'Referenced product does not exist'
       });
     }
 
-    // Validate dates
-    if (start_date && end_date && new Date(start_date) >= new Date(end_date)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Start date must be before end date'
-      });
-    }
+    // Auto-generate banner_id
+    const bannerCount = await Banner.countDocuments();
+    const banner_id = `BAN${String(bannerCount + 1).padStart(3, '0')}`;
 
     // Set banner order if not provided
     let order = banner_order;
-    if (!order) {
-      const maxOrder = await Banner.findOne({ banner_type }).sort({ banner_order: -1 });
+    if (!order && order !== 0) {
+      const maxOrder = await Banner.findOne()
+        .sort({ banner_order: -1 });
       order = maxOrder ? maxOrder.banner_order + 1 : 1;
     }
 
     const banner = new Banner({
-      banner_title,
-      banner_description: banner_description || '',
+      banner_id,
+      pd_id,
       banner_image_url,
+      cloudinary_public_id,
       banner_link_url: banner_link_url || null,
-      banner_type,
       banner_order: order,
-      start_date: start_date ? new Date(start_date) : null,
-      end_date: end_date ? new Date(end_date) : null,
-      is_active,
-      created_at: new Date()
+      is_active
     });
 
     await banner.save();
@@ -135,14 +164,9 @@ class BannerController {
   // PUT /api/v1/banners/:id - Update banner
   static updateBanner = asyncHandler(async (req, res) => {
     const {
-      banner_title,
-      banner_description,
       banner_image_url,
       banner_link_url,
-      banner_type,
       banner_order,
-      start_date,
-      end_date,
       is_active
     } = req.body;
 
@@ -154,37 +178,10 @@ class BannerController {
       });
     }
 
-    // Validate banner type if provided
-    if (banner_type) {
-      const validTypes = ['homepage', 'category', 'product', 'promotion'];
-      if (!validTypes.includes(banner_type)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid banner type'
-        });
-      }
-    }
-
-    // Validate dates
-    const newStartDate = start_date ? new Date(start_date) : banner.start_date;
-    const newEndDate = end_date ? new Date(end_date) : banner.end_date;
-    
-    if (newStartDate && newEndDate && newStartDate >= newEndDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Start date must be before end date'
-      });
-    }
-
     // Update fields
-    if (banner_title) banner.banner_title = banner_title;
-    if (banner_description !== undefined) banner.banner_description = banner_description;
     if (banner_image_url) banner.banner_image_url = banner_image_url;
     if (banner_link_url !== undefined) banner.banner_link_url = banner_link_url;
-    if (banner_type) banner.banner_type = banner_type;
     if (banner_order !== undefined) banner.banner_order = banner_order;
-    if (start_date !== undefined) banner.start_date = start_date ? new Date(start_date) : null;
-    if (end_date !== undefined) banner.end_date = end_date ? new Date(end_date) : null;
     if (is_active !== undefined) banner.is_active = is_active;
 
     await banner.save();
@@ -198,21 +195,38 @@ class BannerController {
 
   // DELETE /api/v1/banners/:id - Delete banner
   static deleteBanner = asyncHandler(async (req, res) => {
-    const banner = await Banner.findById(req.params.id);
+    console.log('🗑️ DELETE Banner Controller - Start');
+    console.log('📋 Banner ID:', req.params.id);
+    console.log('👤 User:', req.user?.username);
+    console.log('🎭 User Type:', req.userType);
+    console.log('🔑 User Role:', req.user?.role_id?.role_id);
     
-    if (!banner) {
-      return res.status(404).json({
-        success: false,
-        message: 'Banner not found'
+    try {
+      console.log('🔍 Finding banner...');
+      const banner = await Banner.findById(req.params.id);
+      
+      if (!banner) {
+        console.log('❌ Banner not found');
+        return res.status(404).json({
+          success: false,
+          message: 'Banner not found'
+        });
+      }
+
+      console.log('✅ Banner found:', banner.banner_id);
+      console.log('🗑️ Deleting banner...');
+      
+      await Banner.findByIdAndDelete(req.params.id);
+      console.log('✅ Banner deleted successfully');
+
+      res.status(200).json({
+        success: true,
+        message: 'Banner deleted successfully'
       });
+    } catch (error) {
+      console.error('❌ Delete banner error:', error);
+      throw error;
     }
-
-    await Banner.findByIdAndDelete(req.params.id);
-
-    res.status(200).json({
-      success: true,
-      message: 'Banner deleted successfully'
-    });
   });
 
   // GET /api/v1/banners/active - Get active banners for display

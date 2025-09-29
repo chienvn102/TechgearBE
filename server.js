@@ -39,9 +39,22 @@ app.use('/uploads', (req, res, next) => {
 app.use(cors(corsOptions));
 app.use(sanitizeInput);
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body parsing middleware - Skip for upload routes
+app.use((req, res, next) => {
+  // Skip JSON parsing for upload routes
+  if (req.path.includes('/upload/')) {
+    return next();
+  }
+  express.json({ limit: '10mb' })(req, res, next);
+});
+
+app.use((req, res, next) => {
+  // Skip URL encoding for upload routes
+  if (req.path.includes('/upload/')) {
+    return next();
+  }
+  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+});
 
 // Rate limiting for API routes
 app.use('/api', apiRateLimit);

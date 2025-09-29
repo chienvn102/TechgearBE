@@ -239,6 +239,11 @@ class ProductController {
 
   // PUT /api/v1/products/:id - Update product
   static updateProduct = asyncHandler(async (req, res) => {
+    // Debug log
+    console.log('🔍 BACKEND UPDATE RECEIVED:');
+    console.log('Product ID:', req.params.id);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
     const product = await Product.findById(req.params.id);
     if (!product) {
       return res.status(404).json({

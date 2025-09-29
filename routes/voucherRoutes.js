@@ -171,6 +171,12 @@ router.get('/available',
   VoucherController.getAvailableVouchers
 );
 
+// GET /api/v1/vouchers/search - Search voucher by code
+router.get('/search', 
+  authenticateToken,
+  VoucherController.searchVoucherByCode
+);
+
 router.get('/:id', 
   authenticateToken, 
   VoucherController.getVoucherById

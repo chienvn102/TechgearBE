@@ -33,7 +33,7 @@ class ProductTypeController {
     // Add product count for each type
     const typesWithCount = await Promise.all(
       productTypes.map(async (type) => {
-        const productCount = await Product.countDocuments({ product_type_id: type._id });
+        const productCount = await Product.countDocuments({ pdt_id: type._id });
         return {
           ...type.toObject(),
           product_count: productCount
@@ -67,7 +67,7 @@ class ProductTypeController {
     }
 
     // Get product count
-    const productCount = await Product.countDocuments({ product_type_id: productType._id });
+    const productCount = await Product.countDocuments({ pdt_id: productType._id });
 
     res.status(200).json({
       success: true,
@@ -180,7 +180,7 @@ class ProductTypeController {
     }
 
     // Check if product type has products
-    const productCount = await Product.countDocuments({ product_type_id: productType._id });
+    const productCount = await Product.countDocuments({ pdt_id: productType._id });
     if (productCount > 0) {
       return res.status(400).json({
         success: false,
@@ -209,7 +209,7 @@ class ProductTypeController {
       });
     }
 
-    let query = { product_type_id: productType._id };
+    let query = { pdt_id: productType._id };
 
     if (min_price || max_price) {
       query.product_price = {};
@@ -272,7 +272,7 @@ class ProductTypeController {
     const typesWithCount = await Promise.all(
       productTypes.map(async (type) => {
         const productCount = await Product.countDocuments({ 
-          product_type_id: type._id,
+          pdt_id: type._id,
           is_active: true 
         });
         return {
@@ -307,7 +307,7 @@ class ProductTypeController {
         $lookup: {
           from: 'product',
           localField: '_id',
-          foreignField: 'product_type_id',
+          foreignField: 'pdt_id',
           as: 'products'
         }
       },
@@ -336,7 +336,7 @@ class ProductTypeController {
         $lookup: {
           from: 'product',
           localField: '_id',
-          foreignField: 'product_type_id',
+          foreignField: 'pdt_id',
           as: 'products'
         }
       },

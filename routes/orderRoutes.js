@@ -10,8 +10,22 @@ const OrderController = require('../controllers/OrderController');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { authenticateToken, authorize, requirePermission } = require('../middleware/auth');
 
-// Apply authentication to all routes
-router.use(authenticateToken);
+// Apply authentication to all routes except checkout and validate-voucher (guest checkout allowed)
+router.use((req, res, next) => {
+  console.log(`🔐 OrderRoutes middleware: ${req.method} ${req.path}`);
+  
+  // Skip authentication for checkout route, validate-voucher, and order details (for order success page)
+  if ((req.path === '/checkout' && req.method === 'POST') || 
+      (req.path === '/validate-voucher' && req.method === 'POST') ||
+      (req.path.match(/^\/[a-zA-Z0-9_-]+$/) && req.method === 'GET')) {
+    console.log('🔐 Skipping authentication for route:', req.path);
+    return next();
+  }
+  
+  console.log('🔐 Applying authentication for route:', req.path);
+  // Apply authentication for all other routes
+  return authenticateToken(req, res, next);
+});
 
 // GET /api/v1/orders/my-orders - Get orders for the logged in customer
 // Thêm route /my-orders trước route /:id để tránh xung đột
@@ -25,9 +39,9 @@ router.get('/', [
   validatePagination
 ], OrderController.getAllOrders);
 
-// GET /api/v1/orders/:id - Get order by ID
+// GET /api/v1/orders/:id - Get order by ID (can be ObjectId or SKU)
 router.get('/:id', [
-  validateObjectId('id')
+  // Remove validateObjectId to allow both ObjectId and SKU strings
 ], OrderController.getOrderById);
 
 // GET /api/v1/orders/customer/:customerId - Get orders by customer
@@ -36,7 +50,81 @@ router.get('/customer/:customerId', [
   validatePagination
 ], OrderController.getOrdersByCustomer);
 
-// POST /api/v1/orders - Create new order
+// POST /api/v1/orders/validate-voucher - Validate voucher code
+router.post('/validate-voucher', [
+  body('voucher_code')
+    .notEmpty()
+    .withMessage('Voucher code is required')
+    .isLength({ max: 50 })
+    .withMessage('Voucher code must not exceed 50 characters'),
+  body('customer_id')
+    .optional()
+    .isMongoId()
+    .withMessage('Customer ID must be a valid ObjectId'),
+  body('order_total')
+    .optional()
+    .isNumeric()
+    .withMessage('Order total must be a number'),
+  validateRequest
+], OrderController.validateVoucher);
+
+// POST /api/v1/orders/checkout - Create order from cart (multiple products)
+router.post('/checkout', [
+  body('customer_name')
+    .notEmpty()
+    .withMessage('Customer name is required')
+    .isLength({ max: 100 })
+    .withMessage('Customer name must not exceed 100 characters'),
+  body('phone_number')
+    .notEmpty()
+    .withMessage('Phone number is required')
+    .isLength({ max: 20 })
+    .withMessage('Phone number must not exceed 20 characters'),
+  body('email')
+    .optional()
+    .custom((value) => {
+      if (value && value.trim() !== '') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) {
+          throw new Error('Email must be valid');
+        }
+      }
+      return true;
+    }),
+  body('shipping_address')
+    .notEmpty()
+    .withMessage('Shipping address is required')
+    .isLength({ max: 500 })
+    .withMessage('Shipping address must not exceed 500 characters'),
+  body('payment_method_id')
+    .notEmpty()
+    .withMessage('Payment method ID is required')
+    .isMongoId()
+    .withMessage('Payment method ID must be a valid ObjectId'),
+  body('order_note')
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage('Order note must not exceed 500 characters'),
+  body('voucher_code')
+    .optional()
+    .isLength({ max: 50 })
+    .withMessage('Voucher code must not exceed 50 characters'),
+  body('items')
+    .isArray({ min: 1 })
+    .withMessage('Items array is required and must not be empty'),
+  body('items.*.pd_id')
+    .notEmpty()
+    .withMessage('Product ID is required for each item'),
+  body('items.*.quantity')
+    .isInt({ min: 1 })
+    .withMessage('Quantity must be a positive integer'),
+  body('items.*.pd_price')
+    .isNumeric()
+    .withMessage('Product price must be a number'),
+  validateRequest
+], OrderController.createOrderFromCart);
+
+// POST /api/v1/orders - Create new order (single product)
 router.post('/', [
   body('od_id')
     .notEmpty()

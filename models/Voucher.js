@@ -64,7 +64,7 @@ const voucherSchema = new mongoose.Schema({
   ranking_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Ranking',
-    required: true
+    required: false // Optional - voucher có thể dành cho tất cả khách hàng
   },
   is_active: {
     type: Boolean,

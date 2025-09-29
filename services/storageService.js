@@ -45,6 +45,15 @@ class StorageService {
     });
   }
 
+  // ✅ UPLOAD BANNER IMAGE: Specialized banner upload
+  async uploadBannerImage(file, bannerId) {
+    return await this.uploadImage(file, {
+      type: 'banner',
+      entity_id: bannerId,
+      folder: 'banners'
+    });
+  }
+
   // ✅ CLOUDINARY UPLOAD
   async uploadToCloudinary(file, options = {}) {
     try {
@@ -56,6 +65,8 @@ class StorageService {
         cloudinaryResult = await cloudinaryService.uploadBrandImage(file, entity_id);
       } else if (type === 'player') {
         cloudinaryResult = await cloudinaryService.uploadPlayerImage(file, entity_id);
+      } else if (type === 'banner') {
+        cloudinaryResult = await cloudinaryService.uploadBannerImage(file, entity_id);
       } else {
         // Product upload (existing logic)
         cloudinaryResult = await cloudinaryService.uploadImage(file, {
@@ -270,6 +281,71 @@ class StorageService {
     };
 
     return stats;
+  }
+
+  // ✅ DELETE BANNER IMAGE: Xóa banner image từ Cloudinary
+  async deleteBannerImage(publicId) {
+    try {
+      if (this.storageMethod === 'cloudinary') {
+        return await cloudinaryService.deleteImage(publicId);
+      } else {
+        // For local storage fallback
+        return { success: true, message: 'Local banner image deletion not implemented' };
+      }
+    } catch (error) {
+      console.error('❌ Delete banner image error:', error);
+      throw new Error(`Failed to delete banner image: ${error.message}`);
+    }
+  }
+
+  // ✅ GENERATE BANNER IMAGE TRANSFORMATIONS: Tạo các URL transformation cho banner
+  generateBannerImageTransformations(publicId) {
+    if (!publicId) return null;
+    
+    try {
+      const transformations = {
+        hero: cloudinaryService.getImageUrls(publicId, { 
+          width: 1920, 
+          height: 600, 
+          crop: 'fill',
+          quality: 'auto',
+          fetch_format: 'auto'
+        }),
+        large: cloudinaryService.getImageUrls(publicId, { 
+          width: 1200, 
+          height: 400, 
+          crop: 'fill',
+          quality: 'auto',
+          fetch_format: 'auto'
+        }),
+        medium: cloudinaryService.getImageUrls(publicId, { 
+          width: 800, 
+          height: 250, 
+          crop: 'fill',
+          quality: 'auto',
+          fetch_format: 'auto'
+        }),
+        small: cloudinaryService.getImageUrls(publicId, { 
+          width: 400, 
+          height: 125, 
+          crop: 'fill',
+          quality: 'auto',
+          fetch_format: 'auto'
+        }),
+        thumbnail: cloudinaryService.getImageUrls(publicId, { 
+          width: 200, 
+          height: 62, 
+          crop: 'fill',
+          quality: 'auto',
+          fetch_format: 'auto'
+        })
+      };
+
+      return transformations;
+    } catch (error) {
+      console.error('❌ Error generating banner transformations:', error);
+      return null;
+    }
   }
 }
 

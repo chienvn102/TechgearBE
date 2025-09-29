@@ -4,10 +4,11 @@
 const mongoose = require('mongoose');
 
 const bannerSchema = new mongoose.Schema({
-  // Giữ nguyên tất cả field names như trong README_MongoDB.md
+  // CORE FIELDS theo README_MongoDB.md
   banner_id: {
     type: String,
-    required: true,
+    required: false, // Auto-generated, not required from input
+    unique: true,
     trim: true
   },
   pd_id: {
@@ -15,20 +16,39 @@ const bannerSchema = new mongoose.Schema({
     ref: 'Product',
     required: true
   },
-  banner_position: {
+  
+  
+  // IMAGE FIELDS (Cloudinary)
+  banner_image_url: {
     type: String,
-    required: true,
-    trim: true,
-    uppercase: true,
-    enum: ['HOME_TOP', 'HOME_MIDDLE', 'HOME_BOTTOM', 'CATEGORY_TOP', 'PRODUCT_SIDE']
+    required: true // Banner must have image
   },
+  cloudinary_public_id: {
+    type: String,
+    default: null
+  },
+  
+  // DISPLAY ORDER
+  banner_order: {
+    type: Number,
+    default: 0
+  },
+  
+  
+  // STATUS
   is_active: {
     type: Boolean,
     default: true
+  },
+  
+  // OPTIONAL: Direct link override (if not using product link)
+  banner_link_url: {
+    type: String,
+    default: null
   }
 }, {
-  collection: 'banner', // Tên collection chính xác theo rule
-  timestamps: false // Không tự động thêm timestamps
+  collection: 'banner',
+  timestamps: true
 });
 
 // Indexes theo README_MongoDB.md

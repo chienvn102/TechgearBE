@@ -211,9 +211,9 @@ class PaymentMethodController {
 
   // GET /api/v1/payment-methods/active - Get active payment methods for checkout
   static getActivePaymentMethods = asyncHandler(async (req, res) => {
-    const paymentMethods = await PaymentMethod.find({ is_active: true })
-      .select('method_name method_description method_type processing_fee method_order')
-      .sort({ method_order: 1 });
+    const paymentMethods = await PaymentMethod.find({})
+      .select('pm_id pm_name pm_img')
+      .sort({ pm_id: 1 });
 
     res.status(200).json({
       success: true,

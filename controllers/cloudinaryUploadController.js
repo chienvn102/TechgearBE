@@ -11,13 +11,24 @@ class CloudinaryUploadController {
   //UPLOAD PRODUCT IMAGE: Sử dụng storageService để upload lên Cloudinary
   async uploadProductImage(req, res) {
     try {
-      // Validate request
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
+      console.log('🔍 Product image upload request:', {
+        file: req.file ? 'File received' : 'No file',
+        body: req.body,
+        headers: req.headers
+      });
+
+      // Manual validation since no validation middleware is used
+      if (!req.body.pd_id) {
         return res.status(400).json({
           success: false,
-          message: 'Validation errors',
-          errors: errors.array()
+          message: 'Product ID (pd_id) is required'
+        });
+      }
+
+      if (!req.body.color) {
+        return res.status(400).json({
+          success: false,
+          message: 'Color is required'
         });
       }
 
@@ -400,6 +411,137 @@ class CloudinaryUploadController {
       res.status(500).json({
         success: false,
         message: 'Error getting storage stats',
+        error: error.message
+      });
+    }
+  }
+
+  // ✅ GET PRODUCT IMAGES: Lấy tất cả ảnh của sản phẩm
+  async getProductImages(req, res) {
+    try {
+      const { pd_id } = req.params;
+
+      if (!pd_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Product ID (pd_id) is required'
+        });
+      }
+
+      // Lấy tất cả ảnh của sản phẩm
+      const images = await ProductImage.find({ pd_id }).sort({ is_primary: -1, created_at: 1 });
+      
+      res.json({
+        success: true,
+        data: {
+          product_id: pd_id,
+          images: images,
+          total: images.length
+        },
+        message: `Found ${images.length} images for product`
+      });
+
+    } catch (error) {
+      console.error('❌ Get product images error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error getting product images',
+        error: error.message
+      });
+    }
+  }
+
+  // ✅ DELETE PRODUCT IMAGE: Xóa ảnh sản phẩm
+  async deleteProductImage(req, res) {
+    try {
+      const { image_id } = req.params;
+
+      if (!image_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Image ID is required'
+        });
+      }
+
+      // Tìm ảnh trong database
+      const image = await ProductImage.findById(image_id);
+      if (!image) {
+        return res.status(404).json({
+          success: false,
+          message: 'Image not found'
+        });
+      }
+
+      // Xóa ảnh từ Cloudinary nếu có
+      if (image.cloudinary_public_id) {
+        try {
+          await storageService.deleteImage(image.cloudinary_public_id);
+        } catch (cloudinaryError) {
+          console.error('❌ Cloudinary delete error:', cloudinaryError);
+          // Không fail nếu Cloudinary delete lỗi, vẫn tiếp tục xóa record DB
+        }
+      }
+
+      // Xóa record từ database
+      await ProductImage.findByIdAndDelete(image_id);
+
+      res.json({
+        success: true,
+        message: 'Image deleted successfully',
+        data: { deleted_image_id: image_id }
+      });
+
+    } catch (error) {
+      console.error('❌ Delete image error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error deleting image',
+        error: error.message
+      });
+    }
+  }
+
+  // ✅ SET DEFAULT IMAGE: Đặt ảnh làm ảnh chính
+  async setDefaultImage(req, res) {
+    try {
+      const { imageId } = req.params;
+
+      if (!imageId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Image ID is required'
+        });
+      }
+
+      // Tìm ảnh
+      const image = await ProductImage.findById(imageId);
+      if (!image) {
+        return res.status(404).json({
+          success: false,
+          message: 'Image not found'
+        });
+      }
+
+      // Bỏ is_primary của tất cả ảnh khác cùng sản phẩm
+      await ProductImage.updateMany(
+        { pd_id: image.pd_id },
+        { is_primary: false }
+      );
+
+      // Đặt ảnh này làm primary
+      await ProductImage.findByIdAndUpdate(imageId, { is_primary: true });
+
+      res.json({
+        success: true,
+        message: 'Default image updated successfully',
+        data: { primary_image_id: imageId }
+      });
+
+    } catch (error) {
+      console.error('❌ Set default image error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error setting default image',
         error: error.message
       });
     }

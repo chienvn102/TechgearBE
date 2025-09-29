@@ -40,7 +40,7 @@ const authenticateToken = async (req, res, next) => {
       .select('-password');
 
     if (user) {
-      // Get customer ranking
+      // Get customer ranking separately
       const customerRanking = await CustomerRanking.findOne({ 
         customer_id: user.customer_id._id 
       }).populate('rank_id', 'rank_id rank_name min_spending max_spending');
@@ -48,7 +48,6 @@ const authenticateToken = async (req, res, next) => {
       // Add ranking info to customer data
       if (customerRanking) {
         user.customer_id.ranking_id = customerRanking.rank_id;
-        user.customer_id.total_spending = customerRanking.total_spending || 0;
       }
 
       // Customer user found
@@ -89,7 +88,13 @@ const authenticateToken = async (req, res, next) => {
 const authorize = (...requiredRoles) => {
   return async (req, res, next) => {
     try {
+      console.log('🔐 Authorization middleware - Start');
+      console.log('📋 Required roles:', requiredRoles);
+      console.log('👤 User exists:', !!req.user);
+      console.log('🎭 User type:', req.userType);
+      
       if (!req.user) {
+        console.log('❌ No user found in request');
         return res.status(401).json({
           success: false,
           message: 'Authentication required'
@@ -99,10 +104,13 @@ const authorize = (...requiredRoles) => {
       // Check if user's role is in required roles
       // Sửa lỗi: Kiểm tra nếu là customer, họ không có role_id
       if (req.userType === 'customer') {
+        console.log('👤 Customer user detected');
         // Nếu chức năng yêu cầu role CUSTOMER hoặc không yêu cầu role nào
         if (requiredRoles.includes('CUSTOMER') || requiredRoles.length === 0) {
+          console.log('✅ Customer access granted');
           return next();
         } else {
+          console.log('❌ Customer access denied');
           return res.status(403).json({
             success: false,
             message: 'Insufficient permissions'
@@ -111,7 +119,7 @@ const authorize = (...requiredRoles) => {
       }
 
       // Nếu là admin, kiểm tra role
-      console.log('🔍 Authorization Debug:');
+      console.log('🔍 Admin Authorization Debug:');
       console.log('- User:', req.user.username);
       console.log('- User Type:', req.userType);
       console.log('- User Role ID:', req.user.role_id);
@@ -136,9 +144,10 @@ const authorize = (...requiredRoles) => {
         });
       }
 
-      console.log('✅ Authorization passed');
+      console.log('✅ Authorization passed - calling next()');
       next();
     } catch (error) {
+      console.error('❌ Authorization error:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error during authorization'

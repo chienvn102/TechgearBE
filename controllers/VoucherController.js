@@ -524,36 +524,40 @@ class VoucherController {
 
   // GET /api/v1/vouchers/available - Get available vouchers for customer based on ranking
   static getAvailableVouchers = asyncHandler(async (req, res) => {
-    if (!req.user || req.userType !== 'customer') {
+    if (!req.user) {
       return res.status(401).json({
         success: false,
-        message: 'Customer authentication required'
+        message: 'Authentication required'
       });
     }
 
     const { page, limit, skip } = req.pagination;
     const { min_order_amount, voucher_type } = req.query;
 
-    // Get customer ranking from user data
-    const customerRanking = req.user.customer_id.ranking_id;
-    if (!customerRanking) {
-      return res.status(400).json({
-        success: false,
-        message: 'Customer ranking not found'
-      });
+    // Get customer ranking from user data (if available)
+    let customerRanking = null;
+    if (req.user.customer_id && req.user.customer_id.ranking_id) {
+      customerRanking = req.user.customer_id.ranking_id;
     }
 
-    // Build query based on customer ranking
+    // Build query for available vouchers
     const now = new Date();
     let query = {
       is_active: true,
       start_date: { $lte: now },
-      end_date: { $gte: now },
-      $or: [
-        { ranking_id: null }, // Global vouchers
-        { ranking_id: customerRanking._id } // Vouchers for customer's rank
-      ]
+      end_date: { $gte: now }
     };
+
+    // Add ranking filter if customer has ranking
+    if (customerRanking) {
+      query.$or = [
+        { ranking_id: null }, // Global vouchers
+        { ranking_id: customerRanking._id || customerRanking } // Vouchers for customer's rank
+      ];
+    } else {
+      // If no ranking, only show global vouchers
+      query.ranking_id = null;
+    }
 
     if (min_order_amount) {
       query.min_order_amount = { $lte: parseFloat(min_order_amount) };
@@ -603,6 +607,77 @@ class VoucherController {
           limit,
           total: vouchersWithUsage.filter(v => v.is_available).length,
           pages: Math.ceil(vouchersWithUsage.filter(v => v.is_available).length / limit)
+        }
+      }
+    });
+  });
+
+  // GET /api/v1/vouchers/search - Search voucher by code
+  static searchVoucherByCode = asyncHandler(async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    const { code } = req.query;
+    
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Voucher code is required'
+      });
+    }
+
+    // Find voucher by code
+    const voucher = await Voucher.findOne({ 
+      voucher_code: code.toUpperCase(),
+      is_active: true
+    });
+
+    if (!voucher) {
+      return res.status(404).json({
+        success: false,
+        message: 'Voucher not found'
+      });
+    }
+
+    // Check if voucher is still valid
+    const now = new Date();
+    if (voucher.start_date > now || voucher.end_date < now) {
+      return res.status(400).json({
+        success: false,
+        message: 'Voucher is not valid at this time'
+      });
+    }
+
+    // Check usage limits
+    const usageCount = await VoucherUsage.countDocuments({ voucher_id: voucher._id });
+    const customerUsageCount = await VoucherUsage.countDocuments({ 
+      voucher_id: voucher._id,
+      user_id: req.user._id
+    });
+
+    const isAvailable = (!voucher.max_uses || usageCount < voucher.max_uses) &&
+                       (!voucher.max_uses_per_customer || customerUsageCount < voucher.max_uses_per_customer);
+
+    if (!isAvailable) {
+      return res.status(400).json({
+        success: false,
+        message: 'Voucher usage limit exceeded'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        voucher: {
+          ...voucher.toObject(),
+          usage_count: usageCount,
+          customer_usage_count: customerUsageCount,
+          remaining_uses: voucher.max_uses ? Math.max(0, voucher.max_uses - usageCount) : null,
+          is_available: true
         }
       }
     });

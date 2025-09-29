@@ -44,7 +44,7 @@ router.get('/public',
 
 // Apply authentication and authorization to protected routes
 router.use(authenticateToken);
-router.use(authorize(['ADMIN', 'MANAGER']));
+router.use(authorize('ADMIN', 'MANAGER'));
 
 // Routes với đầy đủ middleware validation
 

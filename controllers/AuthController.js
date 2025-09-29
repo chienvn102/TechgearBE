@@ -264,13 +264,22 @@ class AuthController {
 
   // Get current user profile
   static getProfile = asyncHandler(async (req, res) => {
-    // req.user already populated by auth middleware
-    res.status(200).json({
-      success: true,
-      data: {
-        user: req.user
-      }
-    });
+    try {
+      // req.user already populated by auth middleware
+      // Just return the user data as is
+      res.status(200).json({
+        success: true,
+        data: {
+          user: req.user
+        }
+      });
+    } catch (error) {
+      console.error('Error in getProfile:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
   });
 
   // Change password

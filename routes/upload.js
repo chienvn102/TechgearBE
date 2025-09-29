@@ -8,6 +8,7 @@ const { upload } = require('../config/multer.config');
 const UploadController = require('../controllers/uploadController');
 const CloudinaryUploadController = require('../controllers/cloudinaryUploadController'); 
 const BrandUploadController = require('../controllers/brandUploadController');
+const BannerUploadController = require('../controllers/bannerUploadController');
 const PlayerUploadController = require('../controllers/playerUploadController');
 const ProductTypeUploadController = require('../controllers/productTypeUploadController');
 const { authenticateToken } = require('../middleware/auth');
@@ -244,6 +245,41 @@ router.delete('/post/:post_id',
   authenticateToken,
   param('post_id').notEmpty().withMessage('Post ID là bắt buộc'),
   (req, res) => PostUploadController.deletePostImage(req, res)
+);
+
+// ==================== BANNER UPLOAD ROUTES ====================
+
+// ✅ UPLOAD BANNER IMAGE 
+// POST /api/v1/upload/banner
+router.post('/banner',
+  authenticateToken,
+  upload.single('banner_image'),
+  body('banner_id').notEmpty().withMessage('Banner ID là bắt buộc'),
+  (req, res) => BannerUploadController.uploadBannerImage(req, res)
+);
+
+// ✅ GET BANNER IMAGE INFO
+// GET /api/v1/upload/banner/:banner_id/image-info
+router.get('/banner/:banner_id/image-info',
+  param('banner_id').notEmpty().withMessage('Banner ID là bắt buộc'),
+  (req, res) => BannerUploadController.getBannerImage(req, res)
+);
+
+// ✅ UPDATE BANNER IMAGE
+// PUT /api/v1/upload/banner/:banner_id
+router.put('/banner/:banner_id',
+  authenticateToken,
+  upload.single('banner_image'),
+  param('banner_id').notEmpty().withMessage('Banner ID là bắt buộc'),
+  (req, res) => BannerUploadController.updateBannerImage(req, res)
+);
+
+// ✅ DELETE BANNER IMAGE
+// DELETE /api/v1/upload/banner/:banner_id
+router.delete('/banner/:banner_id',
+  authenticateToken,
+  param('banner_id').notEmpty().withMessage('Banner ID là bắt buộc'),
+  (req, res) => BannerUploadController.deleteBannerImage(req, res)
 );
 
 module.exports = router;

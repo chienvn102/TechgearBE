@@ -47,7 +47,13 @@ const TRANSFORMATIONS = {
   THUMBNAIL: { width: 200, height: 200, crop: 'fill', fetch_format: 'auto', quality: 'auto' },
   MEDIUM: { width: 500, height: 500, crop: 'fill', fetch_format: 'auto', quality: 'auto' },
   LARGE: { width: 1000, height: 1000, crop: 'fill', fetch_format: 'auto', quality: 'auto' },
-  ORIGINAL: { fetch_format: 'auto', quality: 'auto' }
+  ORIGINAL: { fetch_format: 'auto', quality: 'auto' },
+  
+  // BANNER TRANSFORMATIONS: Tối ưu cho banner 1920x1080
+  BANNER_THUMBNAIL: { width: 300, height: 169, crop: 'fit', fetch_format: 'auto', quality: 'auto' },
+  BANNER_MEDIUM: { width: 800, height: 450, crop: 'fit', fetch_format: 'auto', quality: 'auto' },
+  BANNER_LARGE: { width: 1920, height: 1080, crop: 'fit', fetch_format: 'auto', quality: 'auto' },
+  BANNER_DISPLAY: { width: 1920, height: 1080, crop: 'fit', gravity: 'center', fetch_format: 'auto', quality: 'auto' }
 };
 
 // VALIDATION: Kiểm tra config

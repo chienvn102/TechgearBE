@@ -263,7 +263,7 @@ class CustomerController {
 
   // GET /api/v1/customers/:id/addresses - Get customer addresses
   static getCustomerAddresses = asyncHandler(async (req, res) => {
-    const customer = await Customer.findOne({ customer_id: req.params.id });
+    const customer = await Customer.findById(req.params.id);
     if (!customer) {
       return res.status(404).json({
         success: false,
@@ -271,12 +271,107 @@ class CustomerController {
       });
     }
 
-    const addresses = await CustomerAddress.find({ customer_id: req.params.id })
-      .sort({ is_default: -1, created_at: -1 });
+    const addresses = await CustomerAddress.find({ customer_id: customer._id })
+      .sort({ created_at: -1 });
 
     res.status(200).json({
       success: true,
       data: addresses
+    });
+  });
+
+  // POST /api/v1/customers/:id/addresses - Create customer address
+  static createCustomerAddress = asyncHandler(async (req, res) => {
+    const customer = await Customer.findById(req.params.id);
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Customer not found'
+      });
+    }
+
+    const { name, phone_number, address } = req.body;
+
+    const newAddress = new CustomerAddress({
+      customer_id: customer._id,
+      name,
+      phone_number,
+      address
+    });
+
+    await newAddress.save();
+
+    res.status(201).json({
+      success: true,
+      data: newAddress,
+      message: 'Address created successfully'
+    });
+  });
+
+  // PUT /api/v1/customers/:id/addresses/:addressId - Update customer address
+  static updateCustomerAddress = asyncHandler(async (req, res) => {
+    const customer = await Customer.findById(req.params.id);
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Customer not found'
+      });
+    }
+
+    const address = await CustomerAddress.findOne({
+      _id: req.params.addressId,
+      customer_id: customer._id
+    });
+
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: 'Address not found'
+      });
+    }
+
+    const { name, phone_number, address: addressText } = req.body;
+
+    if (name) address.name = name;
+    if (phone_number) address.phone_number = phone_number;
+    if (addressText) address.address = addressText;
+
+    await address.save();
+
+    res.status(200).json({
+      success: true,
+      data: address,
+      message: 'Address updated successfully'
+    });
+  });
+
+  // DELETE /api/v1/customers/:id/addresses/:addressId - Delete customer address
+  static deleteCustomerAddress = asyncHandler(async (req, res) => {
+    const customer = await Customer.findById(req.params.id);
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Customer not found'
+      });
+    }
+
+    const address = await CustomerAddress.findOne({
+      _id: req.params.addressId,
+      customer_id: customer._id
+    });
+
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: 'Address not found'
+      });
+    }
+
+    await CustomerAddress.findByIdAndDelete(req.params.addressId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Address deleted successfully'
     });
   });
 

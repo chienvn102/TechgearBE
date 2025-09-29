@@ -105,6 +105,57 @@ router.get('/:id/addresses',
   CustomerController.getCustomerAddresses
 );
 
+router.post('/:id/addresses', 
+  authenticateToken, 
+  authorize('CUSTOMER', 'ADMIN', 'MANAGER'), 
+  [
+    body('name')
+      .notEmpty()
+      .withMessage('Address name is required')
+      .isLength({ max: 100 })
+      .withMessage('Address name must not exceed 100 characters'),
+    body('phone_number')
+      .notEmpty()
+      .withMessage('Phone number is required')
+      .isMobilePhone('vi-VN')
+      .withMessage('Phone number must be a valid Vietnamese phone number'),
+    body('address')
+      .notEmpty()
+      .withMessage('Address is required')
+      .isLength({ max: 500 })
+      .withMessage('Address must not exceed 500 characters'),
+    validateRequest
+  ],
+  CustomerController.createCustomerAddress
+);
+
+router.put('/:id/addresses/:addressId', 
+  authenticateToken, 
+  authorize('CUSTOMER', 'ADMIN', 'MANAGER'), 
+  [
+    body('name')
+      .optional()
+      .isLength({ max: 100 })
+      .withMessage('Address name must not exceed 100 characters'),
+    body('phone_number')
+      .optional()
+      .isMobilePhone('vi-VN')
+      .withMessage('Phone number must be a valid Vietnamese phone number'),
+    body('address')
+      .optional()
+      .isLength({ max: 500 })
+      .withMessage('Address must not exceed 500 characters'),
+    validateRequest
+  ],
+  CustomerController.updateCustomerAddress
+);
+
+router.delete('/:id/addresses/:addressId', 
+  authenticateToken, 
+  authorize('CUSTOMER', 'ADMIN', 'MANAGER'), 
+  CustomerController.deleteCustomerAddress
+);
+
 router.get('/:id/orders', 
   authenticateToken, 
   authorize('CUSTOMER', 'ADMIN', 'MANAGER'), 
