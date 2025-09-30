@@ -42,6 +42,13 @@ router.get('/public',
   CustomerRankingController.getAllCustomerRankings
 );
 
+// GET /customer-rankings/customer/:customerId - Get rankings by customer (customer can view their own)
+router.get('/customer/:customerId',
+  authenticateToken,
+  validateObjectId('customerId'),
+  CustomerRankingController.getRankingsByCustomer
+);
+
 // Apply authentication and authorization to protected routes
 router.use(authenticateToken);
 router.use(authorize('ADMIN', 'MANAGER'));
@@ -59,11 +66,6 @@ router.get('/statistics',
   CustomerRankingController.getCustomerRankingStatistics
 );
 
-// GET /customer-rankings/customer/:customerId - Get rankings by customer
-router.get('/customer/:customerId',
-  validateObjectId('customerId'),
-  CustomerRankingController.getRankingsByCustomer
-);
 
 // GET /customer-rankings/:id - Get customer ranking by ID
 router.get('/:id',

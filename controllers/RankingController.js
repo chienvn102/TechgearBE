@@ -149,7 +149,9 @@ class RankingController {
       min_spending,
       max_spending,
       img,
-      about
+      about,
+      discount_percent,
+      benefits
     } = req.body;
 
     const ranking = await Ranking.findById(req.params.id);
@@ -200,6 +202,8 @@ class RankingController {
     if (max_spending !== undefined) ranking.max_spending = max_spending;
     if (img !== undefined) ranking.img = img;
     if (about !== undefined) ranking.about = about;
+    if (discount_percent !== undefined) ranking.discount_percent = discount_percent;
+    if (benefits !== undefined) ranking.benefits = benefits;
 
     await ranking.save();
 

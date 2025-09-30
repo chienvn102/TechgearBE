@@ -10,11 +10,11 @@ const orderSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  po_id: {
+  po_id: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProductOrder',
     required: true
-  },
+  }],
   customer_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Customer',

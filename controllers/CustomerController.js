@@ -47,8 +47,13 @@ class CustomerController {
 
   // GET /api/v1/customers/:id - Get customer by ID
   static getCustomerById = asyncHandler(async (req, res) => {
-    // Find customer by customer_id (string) not ObjectId
-    const customer = await Customer.findOne({ customer_id: req.params.id });
+    // Try to find by ObjectId first, then by customer_id string
+    let customer = await Customer.findById(req.params.id);
+    
+    if (!customer) {
+      // If not found by ObjectId, try by customer_id string
+      customer = await Customer.findOne({ customer_id: req.params.id });
+    }
 
     if (!customer) {
       return res.status(404).json({
@@ -261,6 +266,26 @@ class CustomerController {
     });
   });
 
+  // GET /api/v1/customers/addresses - Get current customer addresses
+  static getCurrentCustomerAddresses = asyncHandler(async (req, res) => {
+    const customerId = req.user.customer_id;
+    
+    if (!customerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer ID not found in token'
+      });
+    }
+    
+    const addresses = await CustomerAddress.find({ customer_id: customerId })
+      .sort({ created_at: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: { addresses }
+    });
+  });
+
   // GET /api/v1/customers/:id/addresses - Get customer addresses
   static getCustomerAddresses = asyncHandler(async (req, res) => {
     const customer = await Customer.findById(req.params.id);
@@ -277,6 +302,38 @@ class CustomerController {
     res.status(200).json({
       success: true,
       data: addresses
+    });
+  });
+
+  // POST /api/v1/customers/addresses - Create current customer address
+  static createCurrentCustomerAddress = asyncHandler(async (req, res) => {
+    const customerId = req.user.customer_id;
+    const { name, phone_number, address, is_default } = req.body;
+
+    // If this is set as default, unset other default addresses
+    if (is_default) {
+      await CustomerAddress.updateMany(
+        { customer_id: customerId },
+        { is_default: false }
+      );
+    }
+
+    const newAddress = new CustomerAddress({
+      customer_id: customerId,
+      name,
+      phone_number,
+      address,
+      is_default: is_default || false,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    await newAddress.save();
+
+    res.status(201).json({
+      success: true,
+      data: { address: newAddress },
+      message: 'Address created successfully'
     });
   });
 
@@ -453,6 +510,103 @@ class CustomerController {
       success: true,
       data: customerRanking,
       message: 'Customer ranking updated successfully'
+    });
+  });
+
+  // PUT /api/v1/customers/addresses/:addressId - Update current customer address
+  static updateCurrentCustomerAddress = asyncHandler(async (req, res) => {
+    const customerId = req.user.customer_id;
+    const { addressId } = req.params;
+    const updateData = req.body;
+
+    const address = await CustomerAddress.findOne({
+      _id: addressId,
+      customer_id: customerId
+    });
+
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: 'Address not found'
+      });
+    }
+
+    // If setting as default, unset other default addresses
+    if (updateData.is_default) {
+      await CustomerAddress.updateMany(
+        { customer_id: customerId, _id: { $ne: addressId } },
+        { is_default: false }
+      );
+    }
+
+    Object.assign(address, updateData);
+    address.updated_at = new Date();
+    await address.save();
+
+    res.status(200).json({
+      success: true,
+      data: { address },
+      message: 'Address updated successfully'
+    });
+  });
+
+  // DELETE /api/v1/customers/addresses/:addressId - Delete current customer address
+  static deleteCurrentCustomerAddress = asyncHandler(async (req, res) => {
+    const customerId = req.user.customer_id;
+    const { addressId } = req.params;
+
+    const address = await CustomerAddress.findOne({
+      _id: addressId,
+      customer_id: customerId
+    });
+
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: 'Address not found'
+      });
+    }
+
+    await CustomerAddress.findByIdAndDelete(addressId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Address deleted successfully'
+    });
+  });
+
+  // PUT /api/v1/customers/addresses/:addressId/set-default - Set default address
+  static setDefaultAddress = asyncHandler(async (req, res) => {
+    const customerId = req.user.customer_id;
+    const { addressId } = req.params;
+
+    const address = await CustomerAddress.findOne({
+      _id: addressId,
+      customer_id: customerId
+    });
+
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: 'Address not found'
+      });
+    }
+
+    // Unset all other default addresses
+    await CustomerAddress.updateMany(
+      { customer_id: customerId },
+      { is_default: false }
+    );
+
+    // Set this address as default
+    address.is_default = true;
+    address.updated_at = new Date();
+    await address.save();
+
+    res.status(200).json({
+      success: true,
+      data: { address },
+      message: 'Default address updated successfully'
     });
   });
 }

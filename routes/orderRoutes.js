@@ -14,9 +14,9 @@ const { authenticateToken, authorize, requirePermission } = require('../middlewa
 router.use((req, res, next) => {
   console.log(`🔐 OrderRoutes middleware: ${req.method} ${req.path}`);
   
-  // Skip authentication for checkout route, validate-voucher, and order details (for order success page)
-  if ((req.path === '/checkout' && req.method === 'POST') || 
-      (req.path === '/validate-voucher' && req.method === 'POST') ||
+  // Skip authentication for validate-voucher and order details (for order success page)
+  // Keep authentication for checkout to track voucher usage properly
+  if ((req.path === '/validate-voucher' && req.method === 'POST') ||
       (req.path.match(/^\/[a-zA-Z0-9_-]+$/) && req.method === 'GET')) {
     console.log('🔐 Skipping authentication for route:', req.path);
     return next();
@@ -30,6 +30,8 @@ router.use((req, res, next) => {
 // GET /api/v1/orders/my-orders - Get orders for the logged in customer
 // Thêm route /my-orders trước route /:id để tránh xung đột
 router.get('/my-orders', [
+  authenticateToken,
+  authorize('CUSTOMER'),
   validatePagination
 ], OrderController.getMyOrders);
 

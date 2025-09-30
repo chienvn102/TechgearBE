@@ -40,7 +40,7 @@ class OrderController {
       .populate('po_id', 'po_id pd_id po_quantity po_price')
       .populate('pm_id', 'pm_id pm_name pm_img')
       .populate('payment_status_id', 'ps_id ps_name ps_description')
-      .populate('voucher_id', 'voucher_id voucher_code voucher_name discount_percent')
+      .populate('voucher_id', 'voucher_id voucher_code voucher_name discount_percent discount_amount max_discount_amount')
       .sort({ order_datetime: -1 })
       .skip(skip)
       .limit(limit);
@@ -125,19 +125,31 @@ class OrderController {
             {
               path: 'category_id',
               select: 'cg_id cg_name'
-            }
+            },
           ]
         }
       })
       .populate('pm_id', 'pm_id pm_name pm_img')
       .populate('payment_status_id', 'ps_id ps_name ps_description')
-      .populate('voucher_id', 'voucher_id voucher_code voucher_name discount_percent');
+      .populate('voucher_id', 'voucher_id voucher_code voucher_name discount_percent discount_amount max_discount_amount');
 
     if (!order) {
       return res.status(404).json({
         success: false,
         message: 'Order not found'
       });
+    }
+
+    // Manually populate product images
+    if (order.po_id && order.po_id.length > 0) {
+      for (let i = 0; i < order.po_id.length; i++) {
+        const productOrder = order.po_id[i];
+        if (productOrder.pd_id && productOrder.pd_id._id) {
+          const ProductImage = require('../models/ProductImage');
+          const images = await ProductImage.find({ pd_id: productOrder.pd_id._id });
+          productOrder.pd_id.images = images;
+        }
+      }
     }
 
     console.log('🔍 Order after populate:', {
@@ -188,10 +200,30 @@ class OrderController {
       console.log('🔍 No po_id found');
     }
     
+    // Calculate ranking discount for display (for old orders that don't have it stored)
+    let rankingDiscount = 0;
+    if (order.customer_id && typeof order.customer_id === 'object') {
+      try {
+        const CustomerRanking = require('../models/CustomerRanking');
+        const customerRanking = await CustomerRanking.findOne({ 
+          customer_id: order.customer_id._id 
+        }).populate('rank_id');
+        
+        if (customerRanking && customerRanking.rank_id.discount_percent > 0) {
+          // Calculate subtotal from product orders
+          const subtotal = productOrders.reduce((sum, po) => sum + (po.po_price * po.po_quantity), 0);
+          rankingDiscount = Math.round((subtotal * customerRanking.rank_id.discount_percent) / 100);
+        }
+      } catch (error) {
+        console.log('⚠️ Could not calculate ranking discount:', error.message);
+      }
+    }
+
     const orderWithInfo = {
       ...order.toObject(),
       order_info: orderInfo,
-      product_images: productImages
+      product_images: productImages,
+      ranking_discount: rankingDiscount
     };
 
     console.log('🔍 OrderController.getOrderById response:', {
@@ -210,7 +242,16 @@ class OrderController {
 
   // GET /api/v1/orders/my-orders - Get orders for the logged in customer
   static getMyOrders = asyncHandler(async (req, res) => {
+    console.log('🔍 getMyOrders called');
+    console.log('- req.user:', req.user ? 'exists' : 'null');
+    console.log('- req.userType:', req.userType);
+    console.log('- req.user.customer_id:', req.user?.customer_id ? 'exists' : 'null');
+    
     if (!req.user || req.userType !== 'customer') {
+      console.log('❌ Authentication failed:', {
+        hasUser: !!req.user,
+        userType: req.userType
+      });
       return res.status(401).json({
         success: false,
         message: 'Authentication required'
@@ -218,25 +259,63 @@ class OrderController {
     }
 
     const { page, limit, skip } = req.pagination;
+    const { search } = req.query;
     
     // Get customer ID from user
     const customerId = req.user.customer_id._id;
+    console.log('🔍 Customer ID:', customerId);
+    console.log('🔍 Search query:', search);
 
     // Build query object
     let query = { customer_id: customerId };
+    
+    // Add search functionality
+    if (search) {
+      // Search by product name through populated po_id.pd_id.pd_name
+      query = {
+        ...query,
+        'po_id.pd_id.pd_name': { $regex: search, $options: 'i' }
+      };
+    }
 
     // Get total count for pagination
     const total = await Order.countDocuments(query);
+    console.log('🔍 Total orders found:', total);
 
     // Get orders with all references populated
     const orders = await Order.find(query)
-      .populate('po_id', 'po_id pd_id po_quantity po_price')
+      .populate({
+        path: 'po_id',
+        select: 'po_id pd_id po_quantity po_price',
+        populate: {
+          path: 'pd_id',
+          select: 'pd_id pd_name pd_price br_id',
+          populate: {
+            path: 'br_id',
+            select: 'br_id br_name'
+          }
+        }
+      })
       .populate('pm_id', 'pm_id pm_name pm_img')
       .populate('payment_status_id', 'ps_id ps_name ps_description')
-      .populate('voucher_id', 'voucher_id voucher_code voucher_name discount_percent')
+      .populate('voucher_id', 'voucher_id voucher_code voucher_name discount_percent discount_amount max_discount_amount')
       .sort({ order_datetime: -1 })
       .skip(skip)
       .limit(limit);
+
+    // Manually populate product images for all orders
+    for (const order of orders) {
+      if (order.po_id && order.po_id.length > 0) {
+        for (let i = 0; i < order.po_id.length; i++) {
+          const productOrder = order.po_id[i];
+          if (productOrder.pd_id && productOrder.pd_id._id) {
+            const ProductImage = require('../models/ProductImage');
+            const images = await ProductImage.find({ pd_id: productOrder.pd_id._id });
+            productOrder.pd_id.images = images;
+          }
+        }
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -277,7 +356,7 @@ class OrderController {
       .populate('po_id', 'po_id pd_id po_quantity po_price')
       .populate('pm_id', 'pm_id pm_name pm_img')
       .populate('payment_status_id', 'ps_id ps_name ps_description')
-      .populate('voucher_id', 'voucher_id voucher_code voucher_name discount_percent')
+      .populate('voucher_id', 'voucher_id voucher_code voucher_name discount_percent discount_amount max_discount_amount')
       .sort({ order_datetime: -1 })
       .skip(skip)
       .limit(limit);
@@ -729,10 +808,25 @@ class OrderController {
         await customer.save();
       }
 
+      // Get customer ranking for automatic discount
+      let customerRanking = null;
+      let rankingDiscount = 0;
+      
+      if (req.user && req.user.customer_id) {
+        customerRanking = await CustomerRanking.findOne({ 
+          customer_id: req.user.customer_id._id 
+        }).populate('rank_id');
+        
+        if (customerRanking && customerRanking.rank_id.discount_percent > 0) {
+          rankingDiscount = Math.round((subtotal * customerRanking.rank_id.discount_percent) / 100);
+          console.log(`🎯 Ranking discount applied: ${customerRanking.rank_id.rank_name} - ${customerRanking.rank_id.discount_percent}% = ${rankingDiscount}đ`);
+        }
+      }
+
       // Validate and apply voucher if provided
       let voucher = null;
       let discountAmount = 0;
-      let finalTotal = subtotal;
+      let finalTotal = subtotal - rankingDiscount; // Apply ranking discount first
 
       if (voucher_code) {
         console.log('🎫 Validating voucher:', voucher_code);
@@ -788,28 +882,28 @@ class OrderController {
           }
         }
 
-        // Calculate discount
+        // Calculate discount (apply on subtotal after ranking discount)
         if (voucher.discount_percent > 0) {
           discountAmount = Math.min(
-            (subtotal * voucher.discount_percent) / 100,
+            (finalTotal * voucher.discount_percent) / 100,
             voucher.max_discount_amount
           );
         } else {
           discountAmount = Math.min(voucher.discount_amount, voucher.max_discount_amount);
         }
 
-        finalTotal = subtotal - discountAmount;
+        finalTotal = finalTotal - discountAmount;
         console.log(`🎫 Voucher applied: ${discountAmount}đ discount`);
       }
 
       // Calculate tax and final total
-      const tax = Math.round(finalTotal * 0.1); // 10% tax on final amount
-      const order_total = finalTotal + tax;
+      const tax = Math.round(subtotal * 0.1); // 10% tax on subtotal, not on discounted amount
+      const order_total = finalTotal + tax; // finalTotal is already after discounts
 
-      // Create the main order
+      // Create the main order with all product orders
       const order = new Order({
         od_id,
-        po_id: productOrders[0]._id, // Link to first product order
+        po_id: productOrders.map(po => po._id), // Link to all product orders
         customer_id: customer._id,
         customer_name,
         shipping_address,
@@ -852,10 +946,21 @@ class OrderController {
       // Populate references for response
       await order.populate([
         { path: 'customer_id', select: 'customer_id name email' },
-        { path: 'po_id', select: 'po_id pd_id po_quantity po_price' },
+        { 
+          path: 'po_id', 
+          select: 'po_id pd_id po_quantity po_price',
+          populate: {
+            path: 'pd_id',
+            select: 'pd_id pd_name pd_price br_id',
+            populate: {
+              path: 'br_id',
+              select: 'br_id br_name'
+            }
+          }
+        },
         { path: 'pm_id', select: 'pm_id pm_name' },
         { path: 'payment_status_id', select: 'ps_id ps_name' },
-        { path: 'voucher_id', select: 'voucher_id voucher_code voucher_name discount_percent' }
+        { path: 'voucher_id', select: 'voucher_id voucher_code voucher_name discount_percent discount_amount max_discount_amount' }
       ]);
 
       console.log(`✅ Order created successfully: ${od_id}, Total: ${order_total}, Discount: ${discountAmount}`);
@@ -872,9 +977,16 @@ class OrderController {
             voucher_name: voucher.voucher_name,
             discount_applied: discountAmount
           } : null,
+          ranking: customerRanking ? {
+            rank_name: customerRanking.rank_id.rank_name,
+            discount_percent: customerRanking.rank_id.discount_percent,
+            discount_applied: rankingDiscount
+          } : null,
           summary: {
             subtotal,
-            discount: discountAmount,
+            ranking_discount: rankingDiscount,
+            voucher_discount: discountAmount,
+            total_discount: rankingDiscount + discountAmount,
             tax,
             total: order_total
           }

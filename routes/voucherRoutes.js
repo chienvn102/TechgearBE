@@ -21,22 +21,23 @@ const createVoucherValidation = [
     .withMessage('Voucher name is required')
     .isString()
     .withMessage('Voucher name must be a string'),
-  body('voucher_type')
-    .notEmpty()
-    .withMessage('Voucher type is required')
-    .isIn(['percentage', 'fixed'])
-    .withMessage('Voucher type must be percentage or fixed'),
-  body('discount_value')
-    .notEmpty()
-    .withMessage('Discount value is required')
+  body('discount_percent')
+    .optional()
     .isNumeric()
-    .withMessage('Discount value must be a number')
-    .custom((value, { req }) => {
-      if (req.body.voucher_type === 'percentage' && (value < 0 || value > 100)) {
-        throw new Error('Percentage discount must be between 0 and 100');
+    .withMessage('Discount percent must be a number')
+    .custom((value) => {
+      if (value !== undefined && (value < 0 || value > 100)) {
+        throw new Error('Discount percent must be between 0 and 100');
       }
-      if (req.body.voucher_type === 'fixed' && value < 0) {
-        throw new Error('Fixed discount must be positive');
+      return true;
+    }),
+  body('discount_amount')
+    .optional()
+    .isNumeric()
+    .withMessage('Discount amount must be a number')
+    .custom((value) => {
+      if (value !== undefined && value < 0) {
+        throw new Error('Discount amount must be positive');
       }
       return true;
     }),
@@ -44,10 +45,10 @@ const createVoucherValidation = [
     .optional()
     .isNumeric()
     .withMessage('Max discount amount must be a number'),
-  body('min_order_amount')
+  body('min_order_value')
     .optional()
     .isNumeric()
-    .withMessage('Min order amount must be a number'),
+    .withMessage('Min order value must be a number'),
   body('max_uses')
     .optional()
     .isInt({ min: 1 })
@@ -60,6 +61,10 @@ const createVoucherValidation = [
     .optional()
     .isISO8601()
     .withMessage('End date must be a valid date'),
+  body('ranking_id')
+    .optional()
+    .isMongoId()
+    .withMessage('Ranking ID must be a valid MongoDB ObjectId'),
   body('is_active')
     .optional()
     .isBoolean()
@@ -76,22 +81,34 @@ const updateVoucherValidation = [
     .optional()
     .isString()
     .withMessage('Voucher name must be a string'),
-  body('voucher_type')
-    .optional()
-    .isIn(['percentage', 'fixed'])
-    .withMessage('Voucher type must be percentage or fixed'),
-  body('discount_value')
+  body('discount_percent')
     .optional()
     .isNumeric()
-    .withMessage('Discount value must be a number'),
+    .withMessage('Discount percent must be a number')
+    .custom((value) => {
+      if (value !== undefined && (value < 0 || value > 100)) {
+        throw new Error('Discount percent must be between 0 and 100');
+      }
+      return true;
+    }),
+  body('discount_amount')
+    .optional()
+    .isNumeric()
+    .withMessage('Discount amount must be a number')
+    .custom((value) => {
+      if (value !== undefined && value < 0) {
+        throw new Error('Discount amount must be positive');
+      }
+      return true;
+    }),
   body('max_discount_amount')
     .optional()
     .isNumeric()
     .withMessage('Max discount amount must be a number'),
-  body('min_order_amount')
+  body('min_order_value')
     .optional()
     .isNumeric()
-    .withMessage('Min order amount must be a number'),
+    .withMessage('Min order value must be a number'),
   body('max_uses')
     .optional()
     .isInt({ min: 1 })
@@ -104,6 +121,10 @@ const updateVoucherValidation = [
     .optional()
     .isISO8601()
     .withMessage('End date must be a valid date'),
+  body('ranking_id')
+    .optional()
+    .isMongoId()
+    .withMessage('Ranking ID must be a valid MongoDB ObjectId'),
   body('is_active')
     .optional()
     .isBoolean()

@@ -72,6 +72,14 @@ router.get('/statistics',
   CustomerController.getCustomerStatistics
 );
 
+// Customer specific routes - MUST come before /:id routes to avoid conflicts
+// GET /api/v1/customers/addresses - Get current customer addresses
+router.get('/addresses', 
+  authenticateToken, 
+  authorize('CUSTOMER'), 
+  CustomerController.getCurrentCustomerAddresses
+);
+
 router.get('/:id', 
   authenticateToken, 
   authorize('ADMIN', 'MANAGER', 'CUSTOMER'), 
@@ -98,11 +106,37 @@ router.delete('/:id',
   CustomerController.deleteCustomer
 );
 
-// Customer specific routes
+// Customer specific routes (moved above to avoid conflicts)
+
 router.get('/:id/addresses', 
   authenticateToken, 
   authorize('CUSTOMER', 'ADMIN', 'MANAGER'), 
   CustomerController.getCustomerAddresses
+);
+
+// POST /api/v1/customers/addresses - Create current customer address
+router.post('/addresses', 
+  authenticateToken, 
+  authorize('CUSTOMER'), 
+  [
+    body('name')
+      .notEmpty()
+      .withMessage('Address name is required')
+      .isLength({ max: 100 })
+      .withMessage('Address name must not exceed 100 characters'),
+    body('phone_number')
+      .notEmpty()
+      .withMessage('Phone number is required')
+      .isMobilePhone('vi-VN')
+      .withMessage('Phone number must be a valid Vietnamese phone number'),
+    body('address')
+      .notEmpty()
+      .withMessage('Address is required')
+      .isLength({ max: 500 })
+      .withMessage('Address must not exceed 500 characters'),
+    validateRequest
+  ],
+  CustomerController.createCurrentCustomerAddress
 );
 
 router.post('/:id/addresses', 
@@ -127,6 +161,42 @@ router.post('/:id/addresses',
     validateRequest
   ],
   CustomerController.createCustomerAddress
+);
+
+// PUT /api/v1/customers/addresses/:addressId - Update current customer address
+router.put('/addresses/:addressId', 
+  authenticateToken, 
+  authorize('CUSTOMER'), 
+  [
+    body('name')
+      .optional()
+      .isLength({ max: 100 })
+      .withMessage('Address name must not exceed 100 characters'),
+    body('phone_number')
+      .optional()
+      .isMobilePhone('vi-VN')
+      .withMessage('Phone number must be a valid Vietnamese phone number'),
+    body('address')
+      .optional()
+      .isLength({ max: 500 })
+      .withMessage('Address must not exceed 500 characters'),
+    validateRequest
+  ],
+  CustomerController.updateCurrentCustomerAddress
+);
+
+// DELETE /api/v1/customers/addresses/:addressId - Delete current customer address
+router.delete('/addresses/:addressId', 
+  authenticateToken, 
+  authorize('CUSTOMER'), 
+  CustomerController.deleteCurrentCustomerAddress
+);
+
+// PUT /api/v1/customers/addresses/:addressId/set-default - Set default address
+router.put('/addresses/:addressId/set-default', 
+  authenticateToken, 
+  authorize('CUSTOMER'), 
+  CustomerController.setDefaultAddress
 );
 
 router.put('/:id/addresses/:addressId', 

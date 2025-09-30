@@ -35,7 +35,18 @@ const rankingSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: 500
-  }
+  },
+  discount_percent: {
+    type: Number,
+    required: false,
+    min: 0,
+    max: 100,
+    default: 0
+  },
+  benefits: [{
+    type: String,
+    trim: true
+  }]
 }, {
   collection: 'ranking', // Tên collection chính xác theo rule
   timestamps: false // Không tự động thêm timestamps

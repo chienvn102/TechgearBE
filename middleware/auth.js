@@ -40,6 +40,13 @@ const authenticateToken = async (req, res, next) => {
       .select('-password');
 
     if (user) {
+      if (!user.customer_id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Customer not found in user account'
+        });
+      }
+      
       // Get customer ranking separately
       const customerRanking = await CustomerRanking.findOne({ 
         customer_id: user.customer_id._id 
@@ -50,8 +57,9 @@ const authenticateToken = async (req, res, next) => {
         user.customer_id.ranking_id = customerRanking.rank_id;
       }
 
-      // Customer user found
+      // Customer user found - set customer_id for easy access
       req.user = user;
+      req.user.customer_id = user.customer_id._id; // Add customer_id for easy access
       req.userType = 'customer';
       return next();
     }

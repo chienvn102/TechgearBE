@@ -20,8 +20,8 @@ const createRateLimit = (windowMs = config.RATE_LIMIT_WINDOW, max = config.RATE_
 };
 
 // Different rate limits for different endpoints
-const authRateLimit = createRateLimit(1 * 60 * 1000, 10); // 10 attempts per 1 minute for auth
-const apiRateLimit = createRateLimit(1 * 60 * 1000, 100); // 100 requests per 1 minute for API
+const authRateLimit = createRateLimit(1 * 60 * 1000, 100); // 100 attempts per 1 minute for auth (increased for development)
+const apiRateLimit = createRateLimit(1 * 60 * 1000, 1000); // 1000 requests per 1 minute for API (increased for development)
 
 // Security headers
 const securityHeaders = helmet({

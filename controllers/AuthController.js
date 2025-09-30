@@ -222,6 +222,15 @@ class AuthController {
       });
     }
 
+    // Check if phone number already exists
+    const existingPhone = await Customer.findOne({ phone_number });
+    if (existingPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number already exists'
+      });
+    }
+
     // Create customer first
     const customer = new Customer({
       customer_id,
@@ -240,6 +249,32 @@ class AuthController {
     });
 
     await userCustomer.save();
+
+    // ✅ Tự động tạo ranking "Thành viên Đồng" cho customer mới
+    try {
+      const { CustomerRanking, Ranking } = require('../models');
+      
+      // Tìm ranking "Thành viên Đồng" (min_spending = 0)
+      const defaultRanking = await Ranking.findOne({ min_spending: 0 });
+      
+      if (defaultRanking) {
+        const customerRanking = new CustomerRanking({
+          customer_id: customer._id,
+          rank_id: defaultRanking._id,
+          total_spending: 0,
+          created_at: new Date(),
+          updated_at: new Date()
+        });
+        
+        await customerRanking.save();
+        console.log(`✅ Auto-created ranking for new customer: ${customer.name} - ${defaultRanking.rank_name}`);
+      } else {
+        console.log('⚠️ Default ranking not found - customer will get ranking when first accessing ranking API');
+      }
+    } catch (error) {
+      console.error('❌ Error creating default ranking for new customer:', error);
+      // Don't fail registration if ranking creation fails
+    }
 
     // Generate JWT token
     const token = generateToken(userCustomer._id);

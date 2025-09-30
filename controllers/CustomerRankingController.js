@@ -24,7 +24,7 @@ class CustomerRankingController {
 
     const customerRankings = await CustomerRanking.find(query)
       .populate('customer_id', 'customer_id name email phone_number')
-      .populate('rank_id', 'rank_name rank_id min_spending max_spending img about')
+      .populate('rank_id', 'rank_name rank_id min_spending max_spending img about discount_percent benefits')
       .sort({ updated_at: -1 })
       .skip(skip)
       .limit(limit);
@@ -47,7 +47,7 @@ class CustomerRankingController {
   static getCustomerRankingById = asyncHandler(async (req, res) => {
     const customerRanking = await CustomerRanking.findById(req.params.id)
       .populate('customer_id', 'customer_id name email phone_number')
-      .populate('rank_id', 'rank_name rank_id min_spending max_spending img about');
+      .populate('rank_id', 'rank_name rank_id min_spending max_spending img about discount_percent benefits');
 
     if (!customerRanking) {
       return res.status(404).json({
@@ -183,10 +183,49 @@ class CustomerRankingController {
   static getRankingsByCustomer = asyncHandler(async (req, res) => {
     const { customerId } = req.params;
 
-    const customerRankings = await CustomerRanking.find({ customer_id: customerId })
+    // Check if user is customer and can only view their own ranking
+    if (req.userType === 'customer' && req.user.customer_id._id.toString() !== customerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only view your own ranking'
+      });
+    }
+
+    // Try to find by ObjectId first, then by customer_id string
+    let customerRankings = await CustomerRanking.find({ customer_id: customerId })
       .populate('customer_id', 'customer_id name email phone_number')
-      .populate('rank_id', 'rank_name rank_id min_spending max_spending img about')
+      .populate('rank_id', 'rank_name rank_id min_spending max_spending img about discount_percent benefits')
       .sort({ updated_at: -1 });
+
+    // If customer has no ranking, create default "Thành viên Đồng" ranking
+    if (customerRankings.length === 0) {
+      console.log('🆕 Creating default ranking for customer:', customerId);
+      
+      // Find "Thành viên Đồng" ranking (min_spending = 0)
+      const defaultRanking = await Ranking.findOne({ min_spending: 0 });
+      
+      if (defaultRanking) {
+        // Create customer ranking with default ranking
+        const newCustomerRanking = new CustomerRanking({
+          customer_id: customerId,
+          rank_id: defaultRanking._id,
+          total_spending: 0,
+          created_at: new Date(),
+          updated_at: new Date()
+        });
+        
+        await newCustomerRanking.save();
+        
+        // Populate the new ranking
+        await newCustomerRanking.populate('customer_id', 'customer_id name email phone_number');
+        await newCustomerRanking.populate('rank_id', 'rank_name rank_id min_spending max_spending img about discount_percent benefits');
+        
+        customerRankings = [newCustomerRanking];
+        console.log('✅ Default ranking created:', defaultRanking.rank_name);
+      } else {
+        console.log('❌ Default ranking not found in database');
+      }
+    }
 
     res.status(200).json({
       success: true,

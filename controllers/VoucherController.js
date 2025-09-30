@@ -83,37 +83,45 @@ class VoucherController {
     const {
       voucher_code,
       voucher_name,
-      voucher_type,
-      discount_value,
+      discount_percent,
+      discount_amount,
       max_discount_amount,
-      min_order_amount,
+      min_order_value,
       max_uses,
       start_date,
       end_date,
+      ranking_id,
       is_active = true
     } = req.body;
 
-    if (!voucher_code || !voucher_name || !voucher_type || !discount_value) {
+    if (!voucher_code || !voucher_name) {
       return res.status(400).json({
         success: false,
-        message: 'Voucher code, name, type and discount value are required'
+        message: 'Voucher code and name are required'
       });
     }
 
-    // Validate voucher type
-    const validTypes = ['percentage', 'fixed'];
-    if (!validTypes.includes(voucher_type)) {
+    // Validate discount fields - at least one must be provided
+    if (!discount_percent && !discount_amount) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid voucher type. Must be percentage or fixed'
+        message: 'Either discount_percent or discount_amount must be provided'
       });
     }
 
     // Validate percentage discount
-    if (voucher_type === 'percentage' && (discount_value < 0 || discount_value > 100)) {
+    if (discount_percent && (discount_percent < 0 || discount_percent > 100)) {
       return res.status(400).json({
         success: false,
         message: 'Percentage discount must be between 0 and 100'
+      });
+    }
+
+    // Validate amount discount
+    if (discount_amount && discount_amount < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount discount must be greater than 0'
       });
     }
 
@@ -134,16 +142,21 @@ class VoucherController {
       });
     }
 
+    // Generate voucher_id
+    const voucher_id = `VOUCHER${Date.now()}`;
+
     const voucher = new Voucher({
+      voucher_id,
       voucher_code: voucher_code.toUpperCase(),
       voucher_name,
-      voucher_type,
-      discount_value,
-      max_discount_amount: max_discount_amount || null,
-      min_order_amount: min_order_amount || 0,
-      max_uses: max_uses || null,
-      start_date: start_date ? new Date(start_date) : null,
-      end_date: end_date ? new Date(end_date) : null,
+      discount_percent: discount_percent || 0,
+      discount_amount: discount_amount || 0,
+      max_discount_amount: max_discount_amount || 0,
+      min_order_value: min_order_value || 0,
+      max_uses: max_uses || 1,
+      start_date: start_date ? new Date(start_date) : new Date(),
+      end_date: end_date ? new Date(end_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      ranking_id: ranking_id || null,
       is_active,
       created_at: new Date()
     });

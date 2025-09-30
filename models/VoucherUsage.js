@@ -23,7 +23,7 @@ const voucherUsageSchema = new mongoose.Schema({
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'UserManagement',
-    required: true
+    required: true // Required since checkout now requires authentication
   },
   discount_applied: {
     type: Number,
