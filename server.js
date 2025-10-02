@@ -116,9 +116,40 @@ const startServer = async () => {
       console.log(`API Prefix: ${config.API_PREFIX}`);
     });
 
+    // Setup Socket.io for real-time notifications
+    const { Server } = require('socket.io');
+    const io = new Server(server, {
+      cors: {
+        origin: ['http://localhost:5000', 'http://localhost:3001'],
+        methods: ['GET', 'POST'],
+        credentials: true
+      }
+    });
+
+    // Socket.io connection handling
+    io.on('connection', (socket) => {
+      console.log(`🔌 Socket connected: ${socket.id}`);
+
+      // Join customer-specific room
+      socket.on('join:customer', (customerId) => {
+        socket.join(`customer:${customerId}`);
+        console.log(`✅ Customer ${customerId} joined notification room`);
+      });
+
+      // Leave room on disconnect
+      socket.on('disconnect', () => {
+        console.log(`🔌 Socket disconnected: ${socket.id}`);
+      });
+    });
+
+    // Make io available globally for notifications
+    global.io = io;
+    console.log('✅ Socket.io initialized for real-time notifications');
+
     // Graceful shutdown
     process.on('SIGTERM', () => {
       console.log('SIGTERM received, shutting down gracefully...');
+      io.close();
       server.close(() => {
         console.log('Process terminated');
         process.exit(0);
@@ -127,6 +158,7 @@ const startServer = async () => {
 
     process.on('SIGINT', () => {
       console.log('SIGINT received, shutting down gracefully...');
+      io.close();
       server.close(() => {
         console.log('Process terminated');
         process.exit(0);

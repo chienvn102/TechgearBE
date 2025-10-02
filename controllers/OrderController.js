@@ -631,7 +631,9 @@ class OrderController {
       });
     }
 
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id)
+      .populate('customer_id', 'customer_id name email');
+    
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -651,6 +653,38 @@ class OrderController {
         success: false,
         message: 'Order info not found'
       });
+    }
+
+    // Create notification for order status change
+    const NotificationControllerV2 = require('./NotificationControllerV2');
+    
+    let notificationType = null;
+    switch (of_state) {
+      case 'ORDER_SUCCESS':
+        notificationType = 'CONFIRMED';
+        break;
+      case 'TRANSFER_TO_SHIPPING':
+      case 'SHIPPING':
+        notificationType = 'SHIPPED';
+        break;
+      case 'DELIVERED':
+        notificationType = 'DELIVERED';
+        break;
+      case 'CANCELLED':
+        notificationType = 'CANCELLED';
+        break;
+    }
+
+    if (notificationType && order.customer_id) {
+      await NotificationControllerV2.createOrderStatusNotification(
+        order._id,
+        order.customer_id._id,
+        notificationType,
+        {
+          od_id: order.od_id,
+          order_total: order.order_total
+        }
+      );
     }
 
     res.status(200).json({

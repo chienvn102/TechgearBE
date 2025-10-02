@@ -492,6 +492,11 @@ class CustomerController {
       });
     }
 
+    // Get current ranking to check if it's an upgrade
+    const currentCustomerRanking = await CustomerRanking.findOne({ 
+      customer_id: req.params.id 
+    }).populate('ranking_id');
+
     // Update or create customer ranking
     const customerRanking = await CustomerRanking.findOneAndUpdate(
       { customer_id: req.params.id },
@@ -504,7 +509,46 @@ class CustomerController {
         upsert: true,
         setDefaultsOnInsert: true
       }
-    );
+    ).populate('ranking_id');
+
+    // Send rank upgrade notification
+    try {
+      const NotificationControllerV2 = require('./NotificationControllerV2');
+      const isUpgrade = !currentCustomerRanking || 
+        (currentCustomerRanking.ranking_id && 
+         currentCustomerRanking.ranking_id.ranking_name !== ranking.ranking_name);
+
+      if (isUpgrade) {
+        const rankEmojis = {
+          'BRONZE': '🥉',
+          'SILVER': '🥈', 
+          'GOLD': '🥇',
+          'PLATINUM': '💎',
+          'DIAMOND': '💠'
+        };
+
+        const rankBenefits = {
+          'BRONZE': 'Giảm giá 5% cho tất cả đơn hàng',
+          'SILVER': 'Giảm giá 10% + Freeship đơn từ 500K',
+          'GOLD': 'Giảm giá 15% + Freeship + Ưu tiên hỗ trợ',
+          'PLATINUM': 'Giảm giá 20% + Freeship + Quà tặng độc quyền',
+          'DIAMOND': 'Giảm giá 25% + Freeship + Quà VIP + Tư vấn riêng'
+        };
+
+        const emoji = rankEmojis[ranking.ranking_name] || '⭐';
+        const benefits = rankBenefits[ranking.ranking_name] || 'Nhiều ưu đãi hấp dẫn';
+
+        await NotificationControllerV2.createRankUpgradeNotification({
+          customer_id: customer._id,
+          ranking_name: ranking.ranking_name,
+          emoji: emoji,
+          benefits: benefits
+        });
+      }
+    } catch (notifError) {
+      console.error('Failed to send rank upgrade notification:', notifError);
+      // Don't fail the ranking update if notification fails
+    }
 
     res.status(200).json({
       success: true,

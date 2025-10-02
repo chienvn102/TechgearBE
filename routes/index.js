@@ -19,6 +19,7 @@ const productTypeRoutes = require('./productTypeRoutes');
 const productReviewRoutes = require('./productReviewRoutes');
 const roleRoutes = require('./roleRoutes');
 const notificationRoutes = require('./notificationRoutes');
+const notificationRoutesV2 = require('./notificationRoutesV2'); // NEW: Enhanced notification system
 const voucherRoutes = require('./voucherRoutes');
 const customerRoutes = require('./customerRoutes');
 const userCustomerRoutes = require('./userCustomerRoutes');
@@ -138,7 +139,7 @@ router.use('/product-orders', productOrderRoutes);
 router.use('/product-types', productTypeRoutes);
 router.use('/product-reviews', productReviewRoutes);
 router.use('/roles', roleRoutes);
-router.use('/notifications', notificationRoutes);
+router.use('/notifications', notificationRoutesV2); // Use enhanced notification routes
 router.use('/vouchers', voucherRoutes);
 router.use('/customers', customerRoutes);
 router.use('/user-customers', userCustomerRoutes);
