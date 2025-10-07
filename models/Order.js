@@ -60,6 +60,17 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 0
+  },
+  // PayOS Payment Integration fields
+  payment_transaction_id: {
+    type: String,
+    default: null,
+    trim: true
+  },
+  payos_order_code: {
+    type: Number,
+    default: null,
+    sparse: true
   }
 }, {
   collection: 'order', // Tên collection chính xác theo rule
@@ -74,5 +85,7 @@ orderSchema.index({ pm_id: 1 });
 orderSchema.index({ voucher_id: 1 });
 orderSchema.index({ payment_status_id: 1 });
 orderSchema.index({ order_datetime: -1 }); // Performance index
+orderSchema.index({ payment_transaction_id: 1 }, { sparse: true }); // PayOS integration
+// payos_order_code will be indexed automatically via sparse: true in schema
 
 module.exports = mongoose.model('Order', orderSchema);

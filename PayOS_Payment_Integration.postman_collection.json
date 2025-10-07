@@ -1,0 +1,424 @@
+{
+  "info": {
+    "name": "PayOS Payment Integration",
+    "description": "Complete PayOS payment API testing collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "payos-ecommerce"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{customer_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Customer Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('customer_token', jsonData.data.token);",
+                  "    pm.environment.set('customer_id', jsonData.data.user._id);",
+                  "    console.log('Token saved:', jsonData.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/customer/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "customer", "login"]
+            },
+            "description": "Login as customer to get authentication token"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "PayOS Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set('order_code', jsonData.data.paymentLink.orderCode);",
+                  "    pm.environment.set('transaction_id', jsonData.data.transaction._id);",
+                  "    pm.environment.set('checkout_url', jsonData.data.paymentLink.checkoutUrl);",
+                  "    console.log('Order Code:', jsonData.data.paymentLink.orderCode);",
+                  "    console.log('Checkout URL:', jsonData.data.paymentLink.checkoutUrl);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"payment_method_id\": \"68e4e09c7b98c7c405270022\",\n  \"amount\": 100000,\n  \"description\": \"Test payment\",\n  \"buyer_name\": \"Nguyễn Văn A\",\n  \"buyer_email\": \"customer@example.com\",\n  \"buyer_phone\": \"0912345678\",\n  \"buyer_address\": \"123 Đường ABC, Quận 1, TP.HCM\",\n  \"items\": [\n    {\n      \"name\": \"iPhone 15 Pro Max\",\n      \"quantity\": 1,\n      \"price\": 100000\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payments/payos/create",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "payos", "create"]
+            },
+            "description": "Create PayOS payment link with QR code"
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has transaction data', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('transaction');",
+                  "    pm.expect(jsonData.data.transaction).to.have.property('status');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/payments/payos/verify/{{order_code}}",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "payos", "verify", "{{order_code}}"]
+            },
+            "description": "Manually verify payment status (for localhost testing)"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Payment cancelled', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.transaction.status).to.eql('CANCELLED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Khách hàng yêu cầu hủy\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payments/payos/cancel/{{order_code}}",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "payos", "cancel", "{{order_code}}"]
+            },
+            "description": "Cancel a pending payment"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Get Transaction History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has transactions array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('transactions');",
+                  "    pm.expect(jsonData.data.transactions).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Response has pagination', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('pagination');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/payments/transactions?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "transactions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "COMPLETED",
+                  "disabled": true
+                },
+                {
+                  "key": "order_id",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get paginated transaction history for authenticated customer"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transaction Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has transaction details', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('transaction');",
+                  "    pm.expect(jsonData.data.transaction).to.have.property('transaction_id');",
+                  "    pm.expect(jsonData.data.transaction).to.have.property('order_id');",
+                  "    pm.expect(jsonData.data.transaction).to.have.property('customer_id');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/payments/transactions/{{transaction_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "transactions", "{{transaction_id}}"]
+            },
+            "description": "Get detailed information about a specific transaction"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Webhook (PayOS)",
+      "item": [
+        {
+          "name": "PayOS Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Signature",
+                "value": "{{payos_signature}}",
+                "description": "PayOS webhook signature"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"00\",\n  \"desc\": \"Thành công\",\n  \"data\": {\n    \"orderCode\": 123456789,\n    \"amount\": 100000,\n    \"description\": \"Thanh toán đơn hàng\",\n    \"accountNumber\": \"1234567890\",\n    \"reference\": \"FT24120712345678\",\n    \"transactionDateTime\": \"2024-12-07 10:35:00\",\n    \"currency\": \"VND\",\n    \"paymentLinkId\": \"abc123def456\",\n    \"code\": \"00\",\n    \"desc\": \"Thành công\",\n    \"counterAccountBankId\": \"\",\n    \"counterAccountBankName\": \"\",\n    \"counterAccountName\": \"NGUYEN VAN A\",\n    \"counterAccountNumber\": \"0987654321\",\n    \"virtualAccountName\": \"\",\n    \"virtualAccountNumber\": \"\"\n  },\n  \"signature\": \"abc123...\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payments/payos/webhook",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "payos", "webhook"]
+            },
+            "description": "PayOS webhook endpoint (public, signature verified). This is called automatically by PayOS when payment is completed."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "customer_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customer_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string",
+      "description": "Set this to a valid order ID from your database"
+    },
+    {
+      "key": "order_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transaction_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "checkout_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "payos_signature",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

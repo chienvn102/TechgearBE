@@ -8,7 +8,7 @@ const bannerSchema = new mongoose.Schema({
   banner_id: {
     type: String,
     required: false, // Auto-generated, not required from input
-    unique: true,
+    unique: true, // This creates index automatically, no need for schema.index()
     trim: true
   },
   pd_id: {
@@ -52,7 +52,7 @@ const bannerSchema = new mongoose.Schema({
 });
 
 // Indexes theo README_MongoDB.md
-bannerSchema.index({ banner_id: 1 }, { unique: true });
+// banner_id index already created via unique: true in schema definition
 bannerSchema.index({ pd_id: 1 });
 
 module.exports = mongoose.model('Banner', bannerSchema);
