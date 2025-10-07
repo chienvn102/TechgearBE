@@ -8,6 +8,7 @@ const router = express.Router();
 const UserManagementController = require('../controllers/UserManagementController');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { authenticateToken, authorize, requirePermission } = require('../middleware/auth');
+const { auditLogger } = require('../middleware/auditLogger');
 
 // Apply authentication to all routes
 router.use(authenticateToken);
@@ -26,6 +27,7 @@ router.get('/:id', [
 
 // POST /api/v1/user-management - Create new user (Admin only)
 router.post('/', [
+  auditLogger('CREATE'),
   authorize('ADMIN'),
   requirePermission('USER_MGMT'),
   body('id')
@@ -60,6 +62,7 @@ router.post('/', [
 
 // PUT /api/v1/user-management/:id - Update user (Admin only)
 router.put('/:id', [
+  auditLogger('UPDATE'),
   authorize('ADMIN'),
   requirePermission('USER_MGMT'),
   validateObjectId('id'),
@@ -86,6 +89,7 @@ router.put('/:id', [
 
 // DELETE /api/v1/user-management/:id - Delete user (Admin only)
 router.delete('/:id', [
+  auditLogger('DELETE'),
   authorize('ADMIN'),
   requirePermission('USER_MGMT'),
   validateObjectId('id')

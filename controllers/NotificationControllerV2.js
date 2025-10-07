@@ -444,6 +444,15 @@ class NotificationControllerV2 {
       let noti_type = 'ORDER_STATUS';
 
       switch (statusType) {
+        case 'ORDER_SUCCESS':
+          noti_title = '🎉 Đặt hàng thành công!';
+          noti_content = `Đơn hàng #${orderDetails.od_id} đã được đặt thành công!\n\n` +
+            `📦 Số lượng sản phẩm: ${orderDetails.items_count}\n` +
+            `💰 Tổng tiền: ${orderDetails.order_total.toLocaleString('vi-VN')}đ\n` +
+            `💳 Phương thức thanh toán: ${orderDetails.payment_method}\n\n` +
+            `Chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất để xác nhận đơn hàng.`;
+          noti_type = 'ORDER_CREATED';
+          break;
         case 'CONFIRMED':
           noti_title = 'Đơn hàng đã được xác nhận';
           noti_content = `Đơn hàng #${orderDetails.od_id} của bạn đã được xác nhận và đang được xử lý. Tổng giá trị: ${orderDetails.order_total.toLocaleString('vi-VN')}đ`;

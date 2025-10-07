@@ -13,14 +13,19 @@ const auditTrailSchema = new mongoose.Schema({
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'UserManagement',
-    required: true
+    required: false // CHANGED: Allow null for customer actions or system actions
+  },
+  customer_user_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'UserCustomer',
+    required: false // For customer actions
   },
   action: {
     type: String,
     required: true,
     trim: true,
     uppercase: true,
-    enum: ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT']
+    enum: ['CREATE', 'UPDATE', 'DELETE'] // Removed LOGIN/LOGOUT
   },
   table_name: {
     type: String,

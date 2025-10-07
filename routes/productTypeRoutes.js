@@ -7,6 +7,7 @@ const ProductTypeController = require('../controllers/ProductTypeController');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { body } = require('express-validator');
+const { auditLogger } = require('../middleware/auditLogger');
 
 // Validation rules
 const createProductTypeValidation = [
@@ -80,6 +81,7 @@ router.get('/:id/products', [
 ], ProductTypeController.getProductTypeProducts);
 
 router.post('/', 
+  auditLogger('CREATE'),
   authenticateToken,
   authorize('ADMIN', 'MANAGER'), 
   createProductTypeValidation,
@@ -88,6 +90,7 @@ router.post('/',
 );
 
 router.put('/:id', 
+  auditLogger('UPDATE'),
   authenticateToken,
   authorize('ADMIN', 'MANAGER'), 
   idValidation,
@@ -97,6 +100,7 @@ router.put('/:id',
 );
 
 router.put('/:id/toggle-status', 
+  auditLogger('UPDATE'),
   authenticateToken,
   authorize('ADMIN', 'MANAGER'), 
   idValidation,
@@ -104,6 +108,7 @@ router.put('/:id/toggle-status',
 );
 
 router.delete('/:id', 
+  auditLogger('DELETE'),
   authenticateToken,
   authorize('ADMIN', 'MANAGER'), 
   idValidation,

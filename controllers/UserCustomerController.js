@@ -268,6 +268,76 @@ static adminResetPassword = asyncHandler(async (req, res) => {
   });
 });
 
+// POST /api/v1/user-customers/change-password - Customer changes their own password
+static changePassword = asyncHandler(async (req, res) => {
+  const { old_password, new_password, confirm_password } = req.body;
+  const userId = req.user._id; // From auth middleware
+
+  // Validation
+  if (!old_password || !new_password || !confirm_password) {
+    return res.status(400).json({
+      success: false,
+      message: 'Vui lòng điền đầy đủ thông tin (mật khẩu cũ, mật khẩu mới, xác nhận mật khẩu)'
+    });
+  }
+
+  if (new_password !== confirm_password) {
+    return res.status(400).json({
+      success: false,
+      message: 'Mật khẩu mới và xác nhận mật khẩu không khớp'
+    });
+  }
+
+  if (new_password.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: 'Mật khẩu mới phải có ít nhất 6 ký tự'
+    });
+  }
+
+  if (old_password === new_password) {
+    return res.status(400).json({
+      success: false,
+      message: 'Mật khẩu mới phải khác mật khẩu cũ'
+    });
+  }
+
+  // Get user with password field
+  const userCustomer = await UserCustomer.findById(userId).select('+password');
+  
+  if (!userCustomer) {
+    return res.status(404).json({
+      success: false,
+      message: 'Không tìm thấy tài khoản'
+    });
+  }
+
+  // Verify old password
+  const isPasswordValid = await bcrypt.compare(old_password, userCustomer.password);
+  
+  if (!isPasswordValid) {
+    return res.status(401).json({
+      success: false,
+      message: 'Mật khẩu cũ không đúng'
+    });
+  }
+
+  // Update password
+  userCustomer.password = new_password; // Will be hashed by pre-save middleware
+  await userCustomer.save();
+
+  console.log(`✅ Password changed successfully for user: ${userCustomer.username}`);
+
+  res.status(200).json({
+    success: true,
+    message: 'Đổi mật khẩu thành công',
+    data: {
+      username: userCustomer.username,
+      updated_at: new Date().toISOString()
+    }
+  });
+});
+
 }
 
 module.exports = UserCustomerController;

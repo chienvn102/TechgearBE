@@ -7,6 +7,7 @@ const CustomerController = require('../controllers/CustomerController');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { body } = require('express-validator');
+const { auditLogger } = require('../middleware/auditLogger');
 
 
 // Validation rules
@@ -87,6 +88,7 @@ router.get('/:id',
 );
 
 router.post('/', 
+  auditLogger('CREATE'),
   authenticateToken, 
   authorize('ADMIN', 'MANAGER'), 
   createCustomerValidation, 
@@ -94,6 +96,7 @@ router.post('/',
 );
 
 router.put('/:id', 
+  auditLogger('UPDATE'),
   authenticateToken, 
   authorize('CUSTOMER', 'ADMIN', 'MANAGER'), 
   updateCustomerValidation, 
@@ -101,6 +104,7 @@ router.put('/:id',
 );
 
 router.delete('/:id', 
+  auditLogger('DELETE'),
   authenticateToken, 
   authorize('ADMIN'), 
   CustomerController.deleteCustomer
@@ -116,6 +120,7 @@ router.get('/:id/addresses',
 
 // POST /api/v1/customers/addresses - Create current customer address
 router.post('/addresses', 
+  auditLogger('CREATE'),
   authenticateToken, 
   authorize('CUSTOMER'), 
   [
@@ -140,6 +145,7 @@ router.post('/addresses',
 );
 
 router.post('/:id/addresses', 
+  auditLogger('CREATE'),
   authenticateToken, 
   authorize('CUSTOMER', 'ADMIN', 'MANAGER'), 
   [
@@ -165,6 +171,7 @@ router.post('/:id/addresses',
 
 // PUT /api/v1/customers/addresses/:addressId - Update current customer address
 router.put('/addresses/:addressId', 
+  auditLogger('UPDATE'),
   authenticateToken, 
   authorize('CUSTOMER'), 
   [
@@ -187,6 +194,7 @@ router.put('/addresses/:addressId',
 
 // DELETE /api/v1/customers/addresses/:addressId - Delete current customer address
 router.delete('/addresses/:addressId', 
+  auditLogger('DELETE'),
   authenticateToken, 
   authorize('CUSTOMER'), 
   CustomerController.deleteCurrentCustomerAddress
@@ -194,12 +202,14 @@ router.delete('/addresses/:addressId',
 
 // PUT /api/v1/customers/addresses/:addressId/set-default - Set default address
 router.put('/addresses/:addressId/set-default', 
+  auditLogger('UPDATE'),
   authenticateToken, 
   authorize('CUSTOMER'), 
   CustomerController.setDefaultAddress
 );
 
 router.put('/:id/addresses/:addressId', 
+  auditLogger('UPDATE'),
   authenticateToken, 
   authorize('CUSTOMER', 'ADMIN', 'MANAGER'), 
   [
@@ -221,6 +231,7 @@ router.put('/:id/addresses/:addressId',
 );
 
 router.delete('/:id/addresses/:addressId', 
+  auditLogger('DELETE'),
   authenticateToken, 
   authorize('CUSTOMER', 'ADMIN', 'MANAGER'), 
   CustomerController.deleteCustomerAddress
@@ -234,6 +245,7 @@ router.get('/:id/orders',
 );
 
 router.put('/:id/ranking', 
+  auditLogger('UPDATE'),
   authenticateToken, 
   authorize('ADMIN', 'MANAGER'), 
   updateRankingValidation, 

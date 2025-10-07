@@ -9,6 +9,7 @@ const router = express.Router();
 const OrderController = require('../controllers/OrderController');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { authenticateToken, authorize, requirePermission } = require('../middleware/auth');
+const { auditLogger } = require('../middleware/auditLogger');
 
 // Apply authentication to all routes except checkout and validate-voucher (guest checkout allowed)
 router.use((req, res, next) => {
@@ -123,7 +124,8 @@ router.post('/checkout', [
   body('items.*.pd_price')
     .isNumeric()
     .withMessage('Product price must be a number'),
-  validateRequest
+  validateRequest,
+  auditLogger('CREATE')
 ], OrderController.createOrderFromCart);
 
 // POST /api/v1/orders - Create new order (single product)
@@ -182,7 +184,8 @@ router.post('/', [
       }
       return true;
     }),
-  validateRequest
+  validateRequest,
+  auditLogger('CREATE')
 ], OrderController.createOrder);
 
 // PUT /api/v1/orders/:id - Update order (Admin only)
@@ -236,7 +239,8 @@ router.put('/:id', [
       }
       return true;
     }),
-  validateRequest
+  validateRequest,
+  auditLogger('UPDATE')
 ], OrderController.updateOrder);
 
 // PUT /api/v1/orders/:id/status - Update order status
@@ -249,14 +253,16 @@ router.put('/:id/status', [
     .withMessage('Order state is required')
     .isIn(['ORDER_SUCCESS', 'TRANSFER_TO_SHIPPING', 'SHIPPING', 'DELIVERED', 'CANCELLED'])
     .withMessage('Order state must be one of: ORDER_SUCCESS, TRANSFER_TO_SHIPPING, SHIPPING, DELIVERED, CANCELLED'),
-  validateRequest
+  validateRequest,
+  auditLogger('UPDATE')
 ], OrderController.updateOrderStatus);
 
 // DELETE /api/v1/orders/:id - Delete order (Admin only)
 router.delete('/:id', [
   authorize('ADMIN'),
   requirePermission('ORDER_MGMT'),
-  validateObjectId('id')
+  validateObjectId('id'),
+  auditLogger('DELETE')
 ], OrderController.deleteOrder);
 
 module.exports = router;

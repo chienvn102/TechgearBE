@@ -7,6 +7,7 @@ const VoucherController = require('../controllers/VoucherController');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { body } = require('express-validator');
+const { auditLogger } = require('../middleware/auditLogger');
 
 
 // Validation rules
@@ -204,6 +205,7 @@ router.get('/:id',
 );
 
 router.post('/', 
+  auditLogger('CREATE'),
   authenticateToken, 
   authorize('ADMIN', 'MANAGER'), 
   createVoucherValidation, 
@@ -211,6 +213,7 @@ router.post('/',
 );
 
 router.put('/:id', 
+  auditLogger('UPDATE'),
   authenticateToken, 
   authorize('ADMIN', 'MANAGER'), 
   updateVoucherValidation, 
@@ -218,6 +221,7 @@ router.put('/:id',
 );
 
 router.delete('/:id', 
+  auditLogger('DELETE'),
   authenticateToken, 
   authorize('ADMIN', 'MANAGER'), 
   VoucherController.deleteVoucher
@@ -230,6 +234,7 @@ router.post('/validate',
 );
 
 router.post('/apply', 
+  auditLogger('CREATE'),
   authenticateToken, 
   authorize('CUSTOMER', 'ADMIN', 'MANAGER'), 
   applyVoucherValidation, 

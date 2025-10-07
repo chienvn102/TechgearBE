@@ -7,6 +7,7 @@ const BannerController = require('../controllers/BannerController');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { body } = require('express-validator');
+const { auditLogger } = require('../middleware/auditLogger');
 
 // Validation rules
 const createBannerValidation = [
@@ -105,6 +106,7 @@ router.get('/:id',
 router.post('/', 
   authenticateToken,
   authorize('ADMIN', 'MANAGER'),
+  auditLogger('CREATE'),
   createBannerValidation,
   BannerController.createBanner
 );
@@ -113,6 +115,7 @@ router.post('/',
 router.put('/:id', 
   authenticateToken,
   authorize('ADMIN', 'MANAGER'),
+  auditLogger('UPDATE'),
   validateObjectId('id'),
   updateBannerValidation,
   BannerController.updateBanner
@@ -122,6 +125,7 @@ router.put('/:id',
 router.delete('/:id', 
   authenticateToken,
   authorize('ADMIN'),
+  auditLogger('DELETE'),
   validateObjectId('id'),
   BannerController.deleteBanner
 );

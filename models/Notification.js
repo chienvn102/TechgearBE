@@ -21,7 +21,17 @@ const notificationSchema = new mongoose.Schema({
     required: true,
     trim: true,
     uppercase: true,
-    enum: ['ORDER_STATUS', 'PROMOTION', 'SYSTEM', 'PAYMENT', 'DELIVERY', 'ORDER_CANCELLED', 'ORDER_CONFIRMED', 'ORDER_SHIPPED']
+    enum: [
+      'ORDER_STATUS', 
+      'ORDER_CREATED',      // ✅ Added: For new order/checkout success
+      'ORDER_CONFIRMED',    // Existing
+      'ORDER_SHIPPED',      // Existing
+      'ORDER_CANCELLED',    // Existing
+      'DELIVERY',           // Existing
+      'PROMOTION', 
+      'SYSTEM', 
+      'PAYMENT'
+    ]
   },
   noti_title: {
     type: String,

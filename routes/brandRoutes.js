@@ -7,6 +7,7 @@ const BrandController = require('../controllers/BrandController');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { body } = require('express-validator');
+const { auditLogger } = require('../middleware/auditLogger');
 
 // Validation rules
 const createBrandValidation = [
@@ -91,6 +92,7 @@ router.get('/statistics',
 // POST /brands - Create new brand
 router.post('/', 
   authorize('ADMIN', 'MANAGER'),
+  auditLogger('CREATE'),
   createBrandValidation,
   validateRequest,
   BrandController.createBrand
@@ -99,6 +101,7 @@ router.post('/',
 // PUT /brands/:id - Update brand
 router.put('/:id', 
   authorize('ADMIN', 'MANAGER'),
+  auditLogger('UPDATE'),
   idValidation,
   updateBrandValidation,
   validateRequest,
@@ -108,6 +111,7 @@ router.put('/:id',
 // DELETE /brands/:id - Delete brand
 router.delete('/:id', 
   authorize('ADMIN'),
+  auditLogger('DELETE'),
   idValidation,
   BrandController.deleteBrand
 );

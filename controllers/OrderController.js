@@ -3,6 +3,7 @@
 
 const { Order, ProductOrder, Customer, PaymentMethod, PaymentStatus, Voucher, Product, OrderInfo, VoucherUsage, UserCustomer, CustomerRanking, Ranking } = require('../models');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { createAuditTrailFromRequest } = require('../utils/auditTrailHelper');
 
 class OrderController {
   // GET /api/v1/orders - Get all orders with advanced filtering
@@ -977,6 +978,26 @@ class OrderController {
       // Update customer total spending and ranking
       await updateCustomerSpendingAndRanking(customer._id, order_total);
 
+      // Create notification for new order
+      const NotificationControllerV2 = require('./NotificationControllerV2');
+      try {
+        await NotificationControllerV2.createOrderStatusNotification(
+          order._id,      // orderId (first parameter)
+          customer._id,   // customerId (second parameter)
+          'ORDER_SUCCESS', // statusType (third parameter)
+          {
+            od_id: od_id,
+            order_total: order_total,
+            payment_method: paymentMethod.pm_name,
+            items_count: items.length
+          }
+        );
+        console.log(`📬 Notification created for new order: ${od_id}`);
+      } catch (notifError) {
+        console.error('⚠️ Failed to create notification:', notifError);
+        // Don't fail the order creation if notification fails
+      }
+
       // Populate references for response
       await order.populate([
         { path: 'customer_id', select: 'customer_id name email' },
@@ -998,6 +1019,13 @@ class OrderController {
       ]);
 
       console.log(`✅ Order created successfully: ${od_id}, Total: ${order_total}, Discount: ${discountAmount}`);
+
+      // Create audit trail for customer order creation
+      await createAuditTrailFromRequest(req, 'CREATE', 'order', {
+        od_id,
+        customer_id: customer._id,
+        order_total
+      });
 
       res.status(201).json({
         success: true,

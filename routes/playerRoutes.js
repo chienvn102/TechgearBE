@@ -7,6 +7,7 @@ const PlayerController = require('../controllers/PlayerController');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { body } = require('express-validator');
+const { auditLogger } = require('../middleware/auditLogger');
 
 
 // Validation rules
@@ -111,23 +112,27 @@ router.get('/:id',
 );
 
 router.post('/', 
+  auditLogger('CREATE'),
   authorize('ADMIN', 'MANAGER'), 
   createPlayerValidation, 
   PlayerController.createPlayer
 );
 
 router.put('/:id', 
+  auditLogger('UPDATE'),
   authorize('ADMIN', 'MANAGER'), 
   updatePlayerValidation, 
   PlayerController.updatePlayer
 );
 
 router.put('/:id/toggle-status', 
+  auditLogger('UPDATE'),
   authorize('ADMIN', 'MANAGER'), 
   PlayerController.togglePlayerStatus
 );
 
 router.delete('/:id', 
+  auditLogger('DELETE'),
   authorize('ADMIN'), 
   PlayerController.deletePlayer
 );

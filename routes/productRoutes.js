@@ -8,6 +8,7 @@ const router = express.Router();
 const ProductController = require('../controllers/ProductController');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { authenticateToken, authorize, requirePermission } = require('../middleware/auth');
+const { auditLogger } = require('../middleware/auditLogger');
 
 // GET /api/v1/products - Get all products (Public access with pagination)
 router.get('/', [
@@ -42,6 +43,7 @@ router.use(authenticateToken);
 router.post('/', [
   authorize('ADMIN'),
   requirePermission('PRODUCT_MGMT'),
+  auditLogger('CREATE'), // Auto-log product creation
   body('pd_id')
     .notEmpty()
     .withMessage('Product ID is required')
@@ -123,6 +125,7 @@ router.post('/', [
 router.put('/:id', [
   authorize('ADMIN'),
   requirePermission('PRODUCT_MGMT'),
+  auditLogger('UPDATE'), // Auto-log product update
   validateObjectId('id'),
   body('pd_id')
     .optional()
@@ -195,6 +198,7 @@ router.put('/:id', [
 router.delete('/:id', [
   authorize('ADMIN'),
   requirePermission('PRODUCT_MGMT'),
+  auditLogger('DELETE'), // Auto-log product deletion
   validateObjectId('id')
 ], ProductController.deleteProduct);
 

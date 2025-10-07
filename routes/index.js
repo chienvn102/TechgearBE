@@ -41,6 +41,7 @@ const permissionRoutes = require('./permissionRoutes');
 const productPlayerRoutes = require('./productPlayerRoutes'); 
 const cartRoutes = require('./cartRoutes'); // NEW: Cart functionality
 const uploadRoutes = require('./upload'); // Full upload functionality with Cloudinary
+const analyticsRoutes = require('./analyticsRoutes'); // NEW: Analytics & Dashboard Statistics
 
 // API prefix từ config
 const { API_PREFIX } = require('../config');
@@ -159,6 +160,7 @@ router.use('/user-addresses', userAddressesRoutes);
 router.use('/role-permission', rolePermissionRoutes);
 router.use('/cart', cartRoutes); // NEW: Cart functionality
 router.use('/upload', uploadRoutes); // NEW: File upload functionality
+router.use('/analytics', analyticsRoutes); // NEW: Analytics & Dashboard Statistics
 
 
 

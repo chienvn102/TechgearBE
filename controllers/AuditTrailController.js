@@ -8,22 +8,87 @@ class AuditTrailController {
   // GET /api/v1/audit-trails - Get all audit trails
   static getAllAuditTrails = asyncHandler(async (req, res) => {
     const { page, limit, skip } = req.pagination;
-    const { user_id, action, table_name, start_date, end_date } = req.query;
+    const { user_id, action, table_name, start_date, end_date, role, ranking, search } = req.query;
 
     let query = {};
     
+    // Filter by specific user
     if (user_id) {
       query.user_id = user_id;
     }
 
-    if (action) {
-      query.action = { $regex: action, $options: 'i' };
+    // NEW: Filter by role (ADMIN, MANAGER, USER)
+    if (role && role !== 'all') {
+      const { Role } = require('../models');
+      const roleDoc = await Role.findOne({ role_name: role.toUpperCase() });
+      if (roleDoc) {
+        const users = await UserManagement.find({ role_id: roleDoc._id });
+        const userIds = users.map(u => u._id);
+        query.user_id = { $in: userIds };
+      }
     }
 
-    if (table_name) {
+    // NEW: Filter by customer ranking (BRONZE, SILVER, GOLD, PLATINUM)
+    if (ranking && ranking !== 'all') {
+      const { Ranking, CustomerRanking, UserCustomer } = require('../models');
+      
+      // Find ranking document
+      const rankingDoc = await Ranking.findOne({ 
+        ranking_name: { $regex: new RegExp(`^${ranking}$`, 'i') }
+      });
+      
+      if (rankingDoc) {
+        // Find customers with this ranking
+        const customerRankings = await CustomerRanking.find({ ranking_id: rankingDoc._id });
+        const customerIds = customerRankings.map(cr => cr.customer_id);
+        
+        // Find user_customers for these customers
+        const userCustomers = await UserCustomer.find({ customer_id: { $in: customerIds } });
+        const userIds = userCustomers.map(uc => uc.user_id);
+        
+        query.user_id = { $in: userIds };
+      }
+    }
+
+    // NEW: Search by username/name
+    if (search) {
+      const users = await UserManagement.find({
+        $or: [
+          { username: { $regex: search, $options: 'i' } },
+          { name: { $regex: search, $options: 'i' } }
+        ]
+      });
+      const userIds = users.map(u => u._id);
+      
+      // Merge with existing user_id filter if exists
+      if (query.user_id) {
+        if (query.user_id.$in) {
+          // Intersect two arrays
+          query.user_id.$in = query.user_id.$in.filter(id => 
+            userIds.some(uid => uid.toString() === id.toString())
+          );
+        } else {
+          // Check if single user_id matches
+          if (!userIds.some(uid => uid.toString() === query.user_id.toString())) {
+            query.user_id = { $in: [] }; // No match
+          }
+        }
+      } else {
+        query.user_id = { $in: userIds };
+      }
+    }
+
+    // Filter by action
+    if (action && action !== 'all') {
+      query.action = action.toUpperCase();
+    }
+
+    // Filter by table name
+    if (table_name && table_name !== 'all') {
       query.table_name = { $regex: table_name, $options: 'i' };
     }
 
+    // Filter by date range
     if (start_date || end_date) {
       query.created_at = {};
       if (start_date) query.created_at.$gte = new Date(start_date);
@@ -33,7 +98,22 @@ class AuditTrailController {
     const total = await AuditTrail.countDocuments(query);
 
     const auditTrails = await AuditTrail.find(query)
-      .populate('user_id', 'username name')
+      .populate({
+        path: 'user_id',
+        select: 'username name',
+        populate: {
+          path: 'role_id',
+          select: 'role_name'
+        }
+      })
+      .populate({
+        path: 'customer_user_id',
+        select: 'username',
+        populate: {
+          path: 'customer_id',
+          select: 'name email'
+        }
+      })
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(limit);

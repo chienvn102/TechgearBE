@@ -7,6 +7,7 @@ const PostController = require('../controllers/PostController');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { body, param, query } = require('express-validator');
+const { auditLogger } = require('../middleware/auditLogger');
 
 // Validation rules
 const createPostValidation = [
@@ -88,6 +89,7 @@ router.get('/:id',
 
 // Protected routes (require authentication and authorization)
 router.post('/', 
+  auditLogger('CREATE'),
   authenticateToken,
   authorize('ADMIN', 'MANAGER'),
   createPostValidation,
@@ -95,6 +97,7 @@ router.post('/',
 );
 
 router.put('/by-post-id/:post_id', 
+  auditLogger('UPDATE'),
   authenticateToken,
   authorize('ADMIN', 'MANAGER'),
   param('post_id').notEmpty().withMessage('post_id is required'),
@@ -103,6 +106,7 @@ router.put('/by-post-id/:post_id',
 );
 
 router.put('/:id', 
+  auditLogger('UPDATE'),
   authenticateToken,
   authorize('ADMIN', 'MANAGER'),
   validateObjectId,
@@ -111,6 +115,7 @@ router.put('/:id',
 );
 
 router.delete('/by-post-id/:post_id', 
+  auditLogger('DELETE'),
   authenticateToken,
   authorize('ADMIN', 'MANAGER'),
   param('post_id').notEmpty().withMessage('post_id is required'),
@@ -119,6 +124,7 @@ router.delete('/by-post-id/:post_id',
 );
 
 router.delete('/:id', 
+  auditLogger('DELETE'),
   authenticateToken,
   authorize('ADMIN', 'MANAGER'),
   validateObjectId,

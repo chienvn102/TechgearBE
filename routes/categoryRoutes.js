@@ -7,6 +7,7 @@ const CategoryController = require('../controllers/CategoryController');
 const { authenticateToken, authorize } = require('../middleware/auth');
 const { validateRequest, validateObjectId, validatePagination } = require('../middleware/validation');
 const { body } = require('express-validator');
+const { auditLogger } = require('../middleware/auditLogger');
 
 
 // Validation rules
@@ -70,6 +71,7 @@ router.get('/:id',
 );
 
 router.post('/', 
+  auditLogger('CREATE'),
   authenticateToken, 
   authorize('ADMIN', 'MANAGER'), 
   createCategoryValidation, 

@@ -52,6 +52,21 @@ const adminResetPasswordValidation = [
   validateRequest
 ];
 
+const changePasswordValidation = [
+  body('old_password')
+    .notEmpty()
+    .withMessage('Mật khẩu cũ không được để trống'),
+  body('new_password')
+    .isLength({ min: 6 })
+    .withMessage('Mật khẩu mới phải có ít nhất 6 ký tự')
+    .notEmpty()
+    .withMessage('Mật khẩu mới không được để trống'),
+  body('confirm_password')
+    .notEmpty()
+    .withMessage('Xác nhận mật khẩu không được để trống'),
+  validateRequest
+];
+
 // Protected routes (require authentication and admin/manager authorization)
 router.get('/', 
   authenticateToken,
@@ -90,6 +105,13 @@ router.put('/:username/admin-reset-password',
   param('username').notEmpty().withMessage('Username is required'),
   adminResetPasswordValidation,
   UserCustomerController.adminResetPassword
+);
+
+// Customer change their own password (no admin required)
+router.post('/change-password', 
+  authenticateToken,
+  changePasswordValidation,
+  UserCustomerController.changePassword
 );
 
 module.exports = router;
