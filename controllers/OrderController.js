@@ -1182,16 +1182,25 @@ class OrderController {
  */
 async function updateCustomerSpendingAndRanking(customerId, orderAmount) {
   try {
-    console.log(`🔄 Updating customer ranking: ${customerId}, order amount: ${orderAmount}`);
+    // Get PAID payment status
+    const paidStatus = await PaymentStatus.findOne({ ps_id: 'PAID' });
+    if (!paidStatus) {
+      console.error('❌ PAID payment status not found');
+      return;
+    }
     
-    // Tính tổng chi tiêu từ tất cả orders của customer
+    // Calculate total spending from PAID orders only
     const totalSpendingResult = await Order.aggregate([
-      { $match: { customer_id: customerId } },
+      { 
+        $match: { 
+          customer_id: customerId,
+          payment_status_id: paidStatus._id
+        } 
+      },
       { $group: { _id: null, total: { $sum: "$order_total" } } }
     ]);
     
     const totalSpending = totalSpendingResult.length > 0 ? totalSpendingResult[0].total : 0;
-    console.log(`💰 Customer total spending: ${totalSpending}`);
     
     // Tìm hoặc tạo customer ranking record
     let customerRanking = await CustomerRanking.findOne({ customer_id: customerId });
@@ -1229,13 +1238,10 @@ async function updateCustomerSpendingAndRanking(customerId, orderAmount) {
     }
     
     if (newRank && customerRanking.rank_id.toString() !== newRank._id.toString()) {
-      console.log(`🎯 Customer rank upgraded from ${customerRanking.rank_id} to ${newRank._id}`);
       customerRanking.rank_id = newRank._id;
     }
     
     await customerRanking.save();
-    
-    console.log(`✅ Customer ranking updated: total spending ${totalSpending}, rank: ${customerRanking.rank_id}`);
     
   } catch (error) {
     console.error('❌ Error updating customer ranking:', error);

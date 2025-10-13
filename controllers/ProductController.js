@@ -8,7 +8,7 @@ class ProductController {
   // GET /api/v1/products - Get all products with advanced filtering
   static getAllProducts = asyncHandler(async (req, res) => {
     const { page, limit, skip } = req.pagination;
-    const { search, br_id, pdt_id, category_id, player_id, color, is_available, min_price, max_price } = req.query;
+    const { search, br_id, pdt_id, category_id, player_id, color, is_available, in_stock_only, min_price, max_price, sort_by } = req.query;
 
     // Build query object
     let query = {};
@@ -21,18 +21,114 @@ class ProductController {
       ];
     }
 
-    if (br_id) query.br_id = br_id;
-    if (pdt_id) query.pdt_id = pdt_id;
-    if (category_id) query.category_id = category_id;
-    if (player_id) query.player_id = player_id;
+    // Handle pdt_id: Convert from pdt_id string to ObjectId reference
+    if (pdt_id) {
+      const productType = await ProductType.findOne({ pdt_id: pdt_id });
+      if (productType) {
+        query.pdt_id = productType._id;
+      } else {
+        // If product type not found, return empty result
+        return res.status(200).json({
+          success: true,
+          data: {
+            products: [],
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              pages: 0
+            }
+          }
+        });
+      }
+    }
+
+    // Handle br_id: Convert from br_id string to ObjectId reference
+    if (br_id) {
+      const brand = await Brand.findOne({ br_id: br_id });
+      if (brand) {
+        query.br_id = brand._id;
+      } else {
+        return res.status(200).json({
+          success: true,
+          data: {
+            products: [],
+            pagination: { page, limit, total: 0, pages: 0 }
+          }
+        });
+      }
+    }
+
+    // Handle player_id: Convert from player_id string to ObjectId reference
+    if (player_id) {
+      const player = await Player.findOne({ player_id: player_id });
+      if (player) {
+        query.player_id = player._id;
+      } else {
+        return res.status(200).json({
+          success: true,
+          data: {
+            products: [],
+            pagination: { page, limit, total: 0, pages: 0 }
+          }
+        });
+      }
+    }
+
+    // Handle category_id: Convert from cg_id string to ObjectId reference
+    if (category_id) {
+      const category = await Category.findOne({ cg_id: category_id });
+      if (category) {
+        query.category_id = category._id;
+      } else {
+        return res.status(200).json({
+          success: true,
+          data: {
+            products: [],
+            pagination: { page, limit, total: 0, pages: 0 }
+          }
+        });
+      }
+    }
+
     if (color) query.color = { $regex: color, $options: 'i' };
     if (is_available !== undefined) query.is_available = is_available === 'true';
+    
+    // Filter by stock (in_stock_only parameter)
+    if (in_stock_only === 'true') {
+      query.pd_quantity = { $gt: 0 };
+    }
 
-    // Price range filter
-    if (min_price || max_price) {
+    // Price range filter - Fix: Check for undefined instead of falsy
+    if (min_price !== undefined || max_price !== undefined) {
       query.pd_price = {};
-      if (min_price) query.pd_price.$gte = Number(min_price);
-      if (max_price) query.pd_price.$lte = Number(max_price);
+      if (min_price !== undefined) query.pd_price.$gte = Number(min_price);
+      if (max_price !== undefined) query.pd_price.$lte = Number(max_price);
+    }
+
+    // Build sort object based on sort_by parameter
+    let sortOptions = {};
+    switch (sort_by) {
+      case 'created_at_desc':
+        sortOptions = { created_at: -1 }; // Mới nhất
+        break;
+      case 'created_at_asc':
+        sortOptions = { created_at: 1 }; // Cũ nhất
+        break;
+      case 'price_asc':
+        sortOptions = { pd_price: 1 }; // Giá thấp đến cao
+        break;
+      case 'price_desc':
+        sortOptions = { pd_price: -1 }; // Giá cao đến thấp
+        break;
+      case 'name_asc':
+        sortOptions = { pd_name: 1 }; // Tên A-Z
+        break;
+      case 'name_desc':
+        sortOptions = { pd_name: -1 }; // Tên Z-A
+        break;
+      default:
+        sortOptions = { created_at: -1 }; // Mặc định: mới nhất
     }
 
     // Get total count for pagination
@@ -44,7 +140,7 @@ class ProductController {
       .populate('pdt_id', 'pdt_id pdt_name pdt_img')
       .populate('category_id', 'cg_id cg_name')
       .populate('player_id', 'player_id player_name player_img') // Có thể null
-      .sort({ created_at: -1 })
+      .sort(sortOptions)
       .skip(skip)
       .limit(limit);
 

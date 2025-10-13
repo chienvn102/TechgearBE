@@ -130,9 +130,20 @@ class BannerController {
       });
     }
 
-    // Auto-generate banner_id
-    const bannerCount = await Banner.countDocuments();
-    const banner_id = `BAN${String(bannerCount + 1).padStart(3, '0')}`;
+    // Auto-generate banner_id - FIX: Tìm banner_id lớn nhất thay vì count
+    const lastBanner = await Banner.findOne()
+      .sort({ banner_id: -1 })
+      .select('banner_id');
+    
+    let nextBannerId = 1;
+    if (lastBanner && lastBanner.banner_id) {
+      // Extract số từ banner_id (VD: "BAN003" → 3)
+      const lastIdNumber = parseInt(lastBanner.banner_id.replace(/\D/g, ''), 10);
+      nextBannerId = lastIdNumber + 1;
+    }
+    
+    const banner_id = `BAN${String(nextBannerId).padStart(3, '0')}`;
+    // Auto-generated banner_id (no log needed)
 
     // Set banner order if not provided
     let order = banner_order;

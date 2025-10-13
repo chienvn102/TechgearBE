@@ -20,14 +20,9 @@ const mongoOptions = {
  */
 const connectDB = async () => {
   try {
-    console.log('🔄 Connecting to MongoDB...');
-    console.log(`📊 Database: ${DATABASE_NAME}`);
-    
     await mongoose.connect(MONGODB_URI, mongoOptions);
     
-    console.log('✅ MongoDB connected successfully');
-    console.log(`📍 Database: ${mongoose.connection.db.databaseName}`);
-    console.log(`🌐 Host: ${mongoose.connection.host}`);
+    console.log('✅ Database connected');
     
     // Handle connection events
     mongoose.connection.on('error', (err) => {
@@ -35,12 +30,12 @@ const connectDB = async () => {
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.log('⚠️ MongoDB disconnected');
+      // Silent disconnect - no log needed
     });
 
     process.on('SIGINT', async () => {
       await mongoose.connection.close();
-      console.log('🔴 MongoDB connection closed through app termination');
+      // Silent shutdown - no log needed
       process.exit(0);
     });
 
@@ -55,29 +50,32 @@ const connectDB = async () => {
  */
 const createIndexes = async () => {
   try {
-    console.log('🔄 Creating database indexes...');
-    
     if (!mongoose.connection || !mongoose.connection.db) {
-      console.log('⚠️ Database connection not ready, skipping index creation');
       return;
     }
     
-    const collections = mongoose.connection.collections;
+    // Use Mongoose models instead of native collections
+    // Mongoose automatically creates indexes from schema definitions
+    const models = mongoose.models;
     
-    if (!collections) {
-      console.log('⚠️ No collections found, skipping index creation');
+    if (!models || Object.keys(models).length === 0) {
       return;
     }
     
-    for (const key in collections) {
+    let successCount = 0;
+    
+    for (const modelName in models) {
       try {
-        await collections[key].createIndexes();
+        const model = models[modelName];
+        // ensureIndexes creates all indexes defined in the schema
+        await model.ensureIndexes();
+        successCount++;
       } catch (err) {
-        console.log(`⚠️ Index creation skipped for ${key}:`, err.message);
+        // Silently skip - indexes might already exist or model might not have indexes
       }
     }
     
-    console.log('✅ Database indexes created successfully');
+    // Silent success - no log needed
   } catch (error) {
     console.error('❌ Error creating indexes:', error.message);
   }

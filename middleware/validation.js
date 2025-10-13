@@ -33,12 +33,14 @@ const validateObjectId = (paramName) => {
     let id = req.params[paramName];
     
     // Remove curly braces if present
-    if (id.startsWith('{') && id.endsWith('}')) {
+    if (id && id.startsWith('{') && id.endsWith('}')) {
       id = id.slice(1, -1);
       req.params[paramName] = id; // Update the parameter
     }
     
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    const isValid = mongoose.Types.ObjectId.isValid(id);
+    
+    if (!isValid) {
       return res.status(400).json({
         success: false,
         message: `Invalid ${paramName} format`

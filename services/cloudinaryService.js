@@ -42,7 +42,7 @@ class CloudinaryService {
               console.error('❌ Cloudinary upload_stream error:', error);
               reject(error);
             } else {
-              console.log('✅ Cloudinary upload_stream successful:', result.public_id);
+              // Success - no need to log every upload
               resolve(result);
             }
           });
@@ -59,8 +59,6 @@ class CloudinaryService {
         console.error('❌ Cloudinary upload failed: No result or public_id returned from Cloudinary.', result);
         throw new Error('Cloudinary upload failed to return a valid result.');
       }
-
-      console.log('✅ Cloudinary upload successful:', result.public_id);
       
       return {
         success: true,
@@ -131,7 +129,7 @@ class CloudinaryService {
               console.error('❌ Banner upload_stream error:', error);
               reject(error);
             } else {
-              console.log('✅ Banner upload_stream successful:', result.public_id);
+              // Success - no need to log every banner upload
               resolve(result);
             }
           });
@@ -145,8 +143,6 @@ class CloudinaryService {
       if (!result || !result.public_id) {
         throw new Error('Banner upload failed to return a valid result.');
       }
-
-      console.log('✅ Banner upload successful:', result.public_id);
       
       return {
         success: true,
@@ -235,7 +231,7 @@ class CloudinaryService {
       const result = await cloudinary.uploader.destroy(public_id);
       
       if (result.result === 'ok') {
-        console.log('✅ Cloudinary image deleted:', public_id);
+        // Success - no log needed
         return { success: true, result: result.result };
       } else {
         console.warn('⚠️ Cloudinary delete warning:', result);
@@ -255,7 +251,7 @@ class CloudinaryService {
         ...options
       });
 
-      console.log('✅ Cloudinary image updated:', public_id);
+      // Success - no log needed
       return {
         success: true,
         public_id: result.public_id,

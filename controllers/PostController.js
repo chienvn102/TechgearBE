@@ -40,11 +40,21 @@ class PostController {
     });
   });
 
-  // GET /api/v1/posts/:id - Get post by ID
+  // GET /api/v1/posts/:id - Get post by ID (supports both _id and post_id)
   static getPostById = asyncHandler(async (req, res) => {
     const { id } = req.params;
     
-    const post = await Post.findById(id);
+    let post = null;
+    
+    // Try to find by _id first (ObjectId)
+    if (id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id)) {
+      post = await Post.findById(id);
+    }
+    
+    // If not found by _id, try to find by post_id (string)
+    if (!post) {
+      post = await Post.findOne({ post_id: id });
+    }
 
     if (!post) {
       return res.status(404).json({

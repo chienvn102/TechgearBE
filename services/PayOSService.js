@@ -21,7 +21,7 @@ class PayOSService {
     try {
       // Initialize PayOS client (v2.0.3 requires destructuring)
       this.payOS = new PayOS(this.clientId, this.apiKey, this.checksumKey);
-      console.log('✅ PayOS Service initialized successfully');
+      // Silent initialization - no logs needed
     } catch (error) {
       console.error('❌ Failed to initialize PayOS:', error.message);
       throw error;

@@ -83,7 +83,6 @@ router.get('/by-post-id/:post_id',
 );
 
 router.get('/:id', 
-  validateObjectId,
   PostController.getPostById
 );
 

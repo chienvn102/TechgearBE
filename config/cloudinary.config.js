@@ -13,7 +13,7 @@ cloudinary.config({
   secure: true
 });
 
-console.log('✅ Cloudinary configured:', config.CLOUDINARY_CLOUD_NAME);
+// Silent configuration - no logs needed
 
 /**
  * Cloudinary Folders Configuration
@@ -59,6 +59,31 @@ const TRANSFORMATIONS = {
     fetch_format: 'auto'
   },
   BANNER: {
+    width: 1920,
+    height: 1080,
+    crop: 'fill',
+    gravity: 'auto',
+    quality: 'auto',
+    fetch_format: 'auto'
+  },
+  // Banner-specific transformations
+  BANNER_THUMBNAIL: {
+    width: 300,
+    height: 169,
+    crop: 'fill',
+    gravity: 'auto',
+    quality: 'auto',
+    fetch_format: 'auto'
+  },
+  BANNER_MEDIUM: {
+    width: 800,
+    height: 450,
+    crop: 'fill',
+    gravity: 'auto',
+    quality: 'auto',
+    fetch_format: 'auto'
+  },
+  BANNER_LARGE: {
     width: 1920,
     height: 1080,
     crop: 'fill',

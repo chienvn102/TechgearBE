@@ -109,11 +109,7 @@ const startServer = async () => {
     // Start server
     const PORT = config.PORT;
     const server = app.listen(PORT, () => {
-      console.log('===========================================');
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Environment: ${config.NODE_ENV}`);
-      console.log(`Database: ${config.DATABASE_NAME}`);
-      console.log(`API Prefix: ${config.API_PREFIX}`);
+      console.log(`🚀 Server running on port ${PORT}`);
     });
 
     // Setup Socket.io for real-time notifications
@@ -128,23 +124,23 @@ const startServer = async () => {
 
     // Socket.io connection handling
     io.on('connection', (socket) => {
-      console.log(`🔌 Socket connected: ${socket.id}`);
+      // Silent connection - no log needed
 
       // Join customer-specific room
       socket.on('join:customer', (customerId) => {
         socket.join(`customer:${customerId}`);
-        console.log(`✅ Customer ${customerId} joined notification room`);
+        // Silent join - no log needed
       });
 
       // Leave room on disconnect
       socket.on('disconnect', () => {
-        console.log(`🔌 Socket disconnected: ${socket.id}`);
+        // Silent disconnect - no log needed
       });
     });
 
     // Make io available globally for notifications
     global.io = io;
-    console.log('✅ Socket.io initialized for real-time notifications');
+    // Silent Socket.io initialization - no log needed
 
     // Graceful shutdown
     process.on('SIGTERM', () => {
