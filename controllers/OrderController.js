@@ -40,7 +40,7 @@ class OrderController {
       .populate('customer_id', 'customer_id name email phone_number')
       .populate('po_id', 'po_id pd_id po_quantity po_price')
       .populate('pm_id', 'pm_id pm_name pm_img')
-      .populate('payment_status_id', 'ps_id ps_name ps_description')
+      .populate('payment_status_id', 'ps_id ps_name ps_description color_code')
       .populate('voucher_id', 'voucher_id voucher_code voucher_name discount_percent discount_amount max_discount_amount')
       .sort({ order_datetime: -1 })
       .skip(skip)
@@ -131,7 +131,7 @@ class OrderController {
         }
       })
       .populate('pm_id', 'pm_id pm_name pm_img')
-      .populate('payment_status_id', 'ps_id ps_name ps_description')
+      .populate('payment_status_id', 'ps_id ps_name ps_description color_code')
       .populate('voucher_id', 'voucher_id voucher_code voucher_name discount_percent discount_amount max_discount_amount');
 
     if (!order) {

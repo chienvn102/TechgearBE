@@ -36,9 +36,9 @@ router.get('/my-orders', [
   validatePagination
 ], OrderController.getMyOrders);
 
-// GET /api/v1/orders - Get all orders (Admin only)
+// GET /api/v1/orders - Get all orders (Admin and Manager)
 router.get('/', [
-  authorize('ADMIN'),
+  authorize('ADMIN', 'MANAGER'),
   validatePagination
 ], OrderController.getAllOrders);
 
@@ -188,9 +188,9 @@ router.post('/', [
   auditLogger('CREATE')
 ], OrderController.createOrder);
 
-// PUT /api/v1/orders/:id - Update order (Admin only)
+// PUT /api/v1/orders/:id - Update order (Admin and Manager)
 router.put('/:id', [
-  authorize('ADMIN'),
+  authorize('ADMIN', 'MANAGER'),
   requirePermission('ORDER_MGMT'),
   validateObjectId('id'),
   body('od_id')
@@ -243,9 +243,9 @@ router.put('/:id', [
   auditLogger('UPDATE')
 ], OrderController.updateOrder);
 
-// PUT /api/v1/orders/:id/status - Update order status
+// PUT /api/v1/orders/:id/status - Update order status (Admin and Manager)
 router.put('/:id/status', [
-  authorize('ADMIN'),
+  authorize('ADMIN', 'MANAGER'),
   requirePermission('ORDER_MGMT'),
   validateObjectId('id'),
   body('of_state')

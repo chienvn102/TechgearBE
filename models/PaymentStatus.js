@@ -21,6 +21,11 @@ const paymentStatusSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: 500
+  },
+  color_code: {
+    type: String,
+    trim: true,
+    maxlength: 20
   }
 }, {
   collection: 'payment_status', // Tên collection chính xác theo rule

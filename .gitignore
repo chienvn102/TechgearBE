@@ -11,13 +11,17 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# Next.js build output
+.next/
+out/
+
+# Production build
+build/
+dist/
+
 # Logs
 logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
 
 # Runtime data
 pids
@@ -31,25 +35,6 @@ coverage/
 
 # nyc test coverage
 .nyc_output
-
-# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
-.grunt
-
-# Bower dependency directory (https://bower.io/)
-bower_components
-
-# node-waf configuration
-.lock-wscript
-
-# Compiled binary addons (https://nodejs.org/api/addons.html)
-build/Release
-
-# Dependency directories
-node_modules/
-jspm_packages/
-
-# TypeScript v1 declaration files
-typings/
 
 # TypeScript cache
 *.tsbuildinfo
@@ -79,12 +64,8 @@ typings/
 .cache
 .parcel-cache
 
-# Next.js build output
-.next
-
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Gatsby files
 .cache/
@@ -106,95 +87,15 @@ temp/
 *.njsproj
 *.sln
 *.sw?
-.DS_Store
 
 # OS generated files
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# Uploads directory (images are stored in Cloudinary)
-public/uploads/*
-!public/uploads/.gitkeep
-
-# Test assets
-test-assets/
-test-image.*
-test-brand-image.*
-
-# Documentation files (không cần thiết cho production)
-API_DOCUMENTATION.md
-API_README.md
-API_README_UPDATED.md
-BRAND_FUNCTIONALITY_REPORT.md
-CLOUDINARY_INTEGRATION_REPORT.md
-CLOUDINARY_SETUP_GUIDE.md
-CUSTOMER_API_SCHEMA_COMPLIANT.md
-PLAYER_FIXES_COMPLETED.md
-README_FIXES.md
-README_RULES.md
-README_MongoDB.md
-DATABASE_STRUCTURE_README.md
-SEED_DOCUMENTATION.md
-UPLOAD_SYSTEM_IMPLEMENTATION.md
-API_DOC.md
-README.md
-simple-api-test.js
-class_chart.md
-
-# Design and asset files
-design-assets/
-*.drawio
-*.drawio.xml
-
-# Backup files
-*.backup
-*.bak
-*_backup.*
-*_old.*
-*_temp.*
-
-# Fix and utility files
-*_fix.*
-*_fixed.*
-*_new.*
-fix-*.js
-debug-*.js
-test-*.js
-create-*.js
-check-*.js
-comprehensive-*.js
-quick-*.js
-restart-*.bat
-cleanup-*.js
-update-*.js
-
-# Utility folders
-scripts/
-utils-temp/
-temp/
-.github/
-validators/
-uploads/
-# Build files
-build/
-dist/
-
-# Database dumps
-*.sql
-*.dump
-
-# IDE and editor files
-.cursor/
-.windsurf/
-*.swp
-*.swo
-*~
-
-# macOS
 .DS_Store
-.AppleDouble
-.LSOverride
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Windows
 Thumbs.db
@@ -203,3 +104,178 @@ Desktop.ini
 
 # Linux
 *~
+
+# Uploads directory (images are stored in Cloudinary)
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Test and debug files
+test-*.js
+debug-*.js
+quick-*.js
+check-*.js
+create-*.js
+fix-*.js
+upload-*.js
+browser-console-test.js
+
+# Specific test files
+test-admin-apis.js
+test-admin-login-quick.js
+test-admin-login.js
+test-admin-panel-fixes.js
+test-api-debug.js
+test-api-direct.js
+test-api-restart.js
+test-auth-debug.js
+test-backend-api.js
+test-backend-connection.js
+test-backend-health.js
+test-backend-quick.js
+test-backend-status.js
+test-banner-flow.js
+test-banner-integration.js
+test-banner-upload-fixed.js
+test-banner-url.js
+test-brand-api-fix.js
+test-brand-detail.js
+test-brand-upload.js
+test-brandservice-import.js
+test-checkout-direct.js
+test-cloudinary.js
+test-complete-flow.js
+test-complete-image-display-fix.js
+test-complete-image-flow.js
+test-correct-login.js
+test-create-page.js
+test-crud-operations.js
+test-css-styling.js
+test-delete-banner.js
+test-delete-with-auth.js
+test-delete-with-real-auth.js
+test-edit-form-data.js
+test-fetch-directly.js
+test-form-no-images.js
+test-frontend-api-simple.js
+test-frontend-api.js
+test-frontend-brand.js
+test-frontend-cloudinary-integration.js
+test-frontend-image-upload.js
+test-frontend-services.js
+test-frontend-upload-fix.js
+test-get-product-detail.js
+test-homepage-images.js
+test-hydration-fix.js
+test-icon-only-buttons.js
+test-image-display-fixes.js
+test-image-upload-flow.js
+test-image-upload.js
+test-image-url-access.js
+test-login-api.js
+test-login-frontend.js
+test-order-fixes.js
+test-order-flow-complete.js
+test-order-response.js
+test-order-status-api.js
+test-orders-frontend.js
+test-order-status-update.js
+test-postman-endpoints.js
+test-product-api-direct.js
+test-product-apis.js
+test-product-detail-images.js
+test-product-detail.js
+test-product-form-fixes.js
+test-product-form.js
+test-product-image-api.js
+test-product-ui-layout.js
+test-product-with-player.js
+test-product-workflow.js
+test-productselector-fixed.js
+test-simple-upload.js
+test-upload-debug.js
+test-upload-simple.js
+test-upload-with-auth.js
+test-users.js
+test-valid-status.js
+
+# Debug files
+debug-admin-auth.js
+debug-admin-products.js
+debug-api-simple.js
+debug-auth-api.js
+debug-auth-flow.js
+debug-auth-status.js
+debug-auth-test.js
+debug-auth.js
+debug-banner-delete.js
+debug-browser-console.js
+debug-cart-checkout-flow.js
+debug-cart-navigation.js
+debug-category-api.js
+debug-checkout-button.js
+debug-checkout-complete.js
+debug-checkout-flow.js
+debug-complete-flow.js
+debug-detailed-auth.js
+debug-form-submit.js
+debug-frontend-api.js
+debug-frontend-console.js
+debug-frontend-upload.js
+debug-frontend-url.js
+debug-image-display.js
+debug-product-api.js
+debug-product-creation.js
+debug-product-selector.js
+debug-route-middleware.js
+debug-token-check.js
+debug-token-complete.js
+debug-token.js
+debug-upload-issue.js
+debug-user-customers-frontend.js
+debug-user-role.js
+
+# Other files
+quick-auth-test.js
+quick-login-test.js
+check-banner-images.js
+create-banners-folder.js
+fix-token-key.js
+browser-console-test.js
+upload-banner-test.js
+upload-sample-product-images.js
+
+# All markdown files except main README
+*.md
+!README.md
+
+# Progress and report files
+*_PROGRESS.md
+*_REPORT.md
+*_PLAN.md
+*_GUIDE.md
+*_COMPLETE.md
+*_CHECKPOINT.md
+*_SUMMARY.md
+*_IMPLEMENTATION.md
+*_IMPROVEMENT.md
+*_REDESIGN.md
+*_SIMPLIFIED.md
+*_FINAL.md
+*_DEBUGGING.md
+*_TEST.md
+*_FEATURE.md
+*_FIXES.md
+*_INFO.md
+
+# Utility folders
+scripts/
+uploads/
+
+# Temporary files
+package.json.temp
+*_temp.*
+*_backup.*
+*_old.*
+*_fix.*
+*_fixed.*
+*_new.*
