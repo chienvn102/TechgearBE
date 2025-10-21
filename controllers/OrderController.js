@@ -166,6 +166,21 @@ class OrderController {
     // Get order_info để hiển thị trạng thái đơn hàng
     const orderInfo = await OrderInfo.findOne({ od_id: order._id }).select('oi_id of_state');
     
+    // Get PayOS payment transaction information
+    const Transaction = require('../models/Transaction');
+    const paymentTransaction = await Transaction.findOne({ 
+      order_id: order._id 
+    })
+      .sort({ created_at: -1 }) // Get latest transaction
+      .select('transaction_id payos_order_code payos_payment_link_id payos_transaction_reference amount status payment_link_url qr_code_url created_at updated_at');
+    
+    console.log('🔍 Payment transaction found:', paymentTransaction ? {
+      transaction_id: paymentTransaction.transaction_id,
+      status: paymentTransaction.status,
+      payos_order_code: paymentTransaction.payos_order_code,
+      amount: paymentTransaction.amount
+    } : 'No transaction');
+    
     // Get product images for all products in the order
     let productImages = [];
     let productOrders = [];
@@ -223,6 +238,7 @@ class OrderController {
     const orderWithInfo = {
       ...order.toObject(),
       order_info: orderInfo,
+      payment_transaction: paymentTransaction ? paymentTransaction.toObject() : null, // Add PayOS transaction info
       product_images: productImages,
       ranking_discount: rankingDiscount
     };
@@ -232,7 +248,8 @@ class OrderController {
       customer_name: orderWithInfo.customer_name,
       order_total: orderWithInfo.order_total,
       po_id_count: productOrders.length,
-      product_images_count: productImages.length
+      product_images_count: productImages.length,
+      has_payment_transaction: !!paymentTransaction
     });
 
     res.status(200).json({
@@ -267,16 +284,47 @@ class OrderController {
     console.log('🔍 Customer ID:', customerId);
     console.log('🔍 Search query:', search);
 
-    // Build query object
+    // Build base query object
     let query = { customer_id: customerId };
     
-    // Add search functionality
+    // If searching, we need to find product IDs first
+    let productOrderIds = null;
     if (search) {
-      // Search by product name through populated po_id.pd_id.pd_name
-      query = {
-        ...query,
-        'po_id.pd_id.pd_name': { $regex: search, $options: 'i' }
-      };
+      const ProductOrder = require('../models/ProductOrder');
+      const Product = require('../models/Product');
+      
+      // Find products matching search
+      const products = await Product.find({
+        pd_name: { $regex: search, $options: 'i' }
+      }).select('_id');
+      
+      if (products.length > 0) {
+        const productIds = products.map(p => p._id);
+        
+        // Find product orders with these products
+        const productOrders = await ProductOrder.find({
+          pd_id: { $in: productIds }
+        }).select('_id');
+        
+        productOrderIds = productOrders.map(po => po._id);
+        
+        // Add to query
+        query.po_id = { $in: productOrderIds };
+      } else {
+        // No products found, return empty result
+        return res.status(200).json({
+          success: true,
+          data: {
+            orders: [],
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              pages: 0
+            }
+          }
+        });
+      }
     }
 
     // Get total count for pagination
@@ -303,6 +351,19 @@ class OrderController {
       .sort({ order_datetime: -1 })
       .skip(skip)
       .limit(limit);
+
+    // Manually populate order_info for delivery status
+    const OrderInfo = require('../models/OrderInfo');
+    for (const order of orders) {
+      const orderInfo = await OrderInfo.findOne({ od_id: order._id });
+      if (orderInfo) {
+        order._doc.order_info = {
+          _id: orderInfo._id,
+          oi_id: orderInfo.oi_id,
+          of_state: orderInfo.of_state
+        };
+      }
+    }
 
     // Manually populate product images for all orders
     for (const order of orders) {
@@ -1247,5 +1308,190 @@ async function updateCustomerSpendingAndRanking(customerId, orderAmount) {
     console.error('❌ Error updating customer ranking:', error);
   }
 }
+
+/**
+ * Export invoice PDF
+ * GET /api/v1/orders/:id/invoice
+ */
+OrderController.exportInvoice = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  console.log('📄 Exporting invoice for order:', id);
+  
+  const puppeteer = require('puppeteer');
+  const { generateInvoiceHTML } = require('../utils/invoiceTemplate');
+  const Order = require('../models/Order');
+  const OrderInfo = require('../models/OrderInfo');
+  const Customer = require('../models/Customer');
+  
+  // Check if ID is ObjectId or SKU
+  const ObjectId = require('mongoose').Types.ObjectId;
+  const isObjectId = ObjectId.isValid(id) && /^[0-9a-fA-F]{24}$/.test(id);
+  
+  let order;
+  if (isObjectId) {
+    order = await Order.findById(id);
+  } else {
+    order = await Order.findOne({ od_id: id });
+  }
+  
+  if (!order) {
+    return res.status(404).json({
+      success: false,
+      message: 'Order not found'
+    });
+  }
+  
+  // Populate order data
+  await order.populate([
+    {
+      path: 'po_id',
+      populate: {
+        path: 'pd_id',
+        populate: [
+          { path: 'br_id', select: 'br_id br_name' },
+          { path: 'pdt_id', select: 'pdt_id pdt_name' },
+          { path: 'category_id', select: 'cg_id cg_name' }
+        ]
+      }
+    },
+    { path: 'customer_id', select: 'customer_id name email phone_number' },
+    { path: 'pm_id', select: 'pm_id pm_name pm_img' },
+    { path: 'payment_status_id', select: 'ps_id ps_name ps_description color_code' },
+    { path: 'voucher_id', select: 'voucher_id voucher_code voucher_name discount_percent discount_amount max_discount_amount' }
+  ]);
+  
+  // Get order info
+  const orderInfo = await OrderInfo.findOne({ od_id: order._id }).select('oi_id of_state');
+  
+  console.log('📍 Shipping info:', {
+    shipping_address: order.shipping_address,
+    customer_name: order.customer_name,
+    has_orderInfo: !!orderInfo,
+    order_state: orderInfo?.of_state
+  });
+  
+  // Get customer details
+  let customer = null;
+  if (order.customer_id) {
+    if (typeof order.customer_id === 'object') {
+      customer = order.customer_id;
+    } else {
+      customer = await Customer.findById(order.customer_id).select('customer_id name email phone_number');
+    }
+  }
+  
+  // Prepare product orders array
+  let productOrders = [];
+  if (order.po_id) {
+    if (Array.isArray(order.po_id)) {
+      productOrders = order.po_id;
+    } else {
+      productOrders = [order.po_id];
+    }
+  }
+  
+  // Prepare invoice data
+  const invoiceData = {
+    order: order.toObject(),
+    orderInfo: orderInfo ? orderInfo.toObject() : null,
+    customer: customer ? customer.toObject() : null,
+    productOrders: productOrders.map(po => po.toObject ? po.toObject() : po),
+    voucher: order.voucher_id ? (order.voucher_id.toObject ? order.voucher_id.toObject() : order.voucher_id) : null,
+    paymentStatus: order.payment_status_id ? (order.payment_status_id.toObject ? order.payment_status_id.toObject() : order.payment_status_id) : null,
+    paymentMethod: order.pm_id ? (order.pm_id.toObject ? order.pm_id.toObject() : order.pm_id) : null
+  };
+  
+  console.log('📄 Invoice data prepared:', {
+    od_id: order.od_id,
+    customer_name: customer?.name,
+    product_count: productOrders.length,
+    total: order.order_total
+  });
+  
+  // Generate HTML
+  const html = generateInvoiceHTML(invoiceData);
+  
+  console.log('📄 HTML template generated, length:', html.length);
+  
+  // Generate PDF with Puppeteer
+  let browser = null;
+  try {
+    console.log('🚀 Launching Puppeteer...');
+    browser = await puppeteer.launch({
+      headless: 'new',
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu'
+      ],
+      timeout: 60000 // 60 seconds
+    });
+    
+    console.log('📄 Creating new page...');
+    const page = await browser.newPage();
+    
+    // Set viewport
+    await page.setViewport({
+      width: 1200,
+      height: 1600
+    });
+    
+    console.log('📄 Loading HTML content...');
+    await page.setContent(html, { 
+      waitUntil: 'networkidle0',
+      timeout: 30000 // 30 seconds
+    });
+    
+    console.log('📄 Generating PDF...');
+    // Generate PDF
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      preferCSSPageSize: false,
+      margin: {
+        top: '12mm',
+        right: '16mm',
+        bottom: '12mm',
+        left: '16mm'
+      }
+    });
+    
+    console.log('📄 PDF generated, buffer size:', pdfBuffer.length, 'bytes');
+    
+    await browser.close();
+    browser = null;
+    
+    // Format filename
+    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const filename = `INV-${order.od_id}-${dateStr}.pdf`;
+    
+    // Send PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.end(pdfBuffer, 'binary');
+    
+    console.log('✅ Invoice PDF sent successfully:', filename);
+    
+  } catch (error) {
+    console.error('❌ PDF generation error:', error);
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (closeError) {
+        console.error('❌ Error closing browser:', closeError);
+      }
+    }
+    
+    // Send error response
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate invoice PDF: ' + error.message
+    });
+  }
+});
 
 module.exports = OrderController;

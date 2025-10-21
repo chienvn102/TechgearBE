@@ -257,6 +257,12 @@ router.put('/:id/status', [
   auditLogger('UPDATE')
 ], OrderController.updateOrderStatus);
 
+// GET /api/v1/orders/:id/invoice - Export invoice PDF (Admin/Manager)
+router.get('/:id/invoice', [
+  authorize('ADMIN', 'MANAGER'),
+  requirePermission('ORDER_MGMT')
+], OrderController.exportInvoice);
+
 // DELETE /api/v1/orders/:id - Delete order (Admin only)
 router.delete('/:id', [
   authorize('ADMIN'),
