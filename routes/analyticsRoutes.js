@@ -22,6 +22,13 @@ router.get('/revenue',
   AnalyticsController.getRevenueMetrics
 );
 
+// Revenue timeline with flexible filtering
+router.get('/revenue/timeline', 
+  authenticateToken, 
+  authorize('ADMIN', 'MANAGER'), 
+  AnalyticsController.getRevenueTimeline
+);
+
 router.get('/orders', 
   authenticateToken, 
   authorize('ADMIN', 'MANAGER'), 

@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # MongoDB connection (using MongoDB Atlas)
+      MONGODB_URI: mongodb+srv://chienvn102:chienvn102@sanshiliu.xdy1ogg.mongodb.net/ecommerce_system?retryWrites=true&w=majority&appName=sanshiliu
+      
+      # JWT Secret (change in production)
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRE: 7d
+      
+      # Cloudinary Configuration
+      CLOUDINARY_CLOUD_NAME: dfcerueaq
+      CLOUDINARY_API_KEY: 475252942396945
+      CLOUDINARY_API_SECRET: 47a94_CgguHLYCscNt39O0awvx0
+      
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  ecommerce-network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local

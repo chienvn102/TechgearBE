@@ -4,7 +4,7 @@
 const mongoose = require('mongoose');
 
 const rolePermissionSchema = new mongoose.Schema({
-  // Giữ nguyên tất cả field names như trong README_MongoDB.md
+ 
   role_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Role',

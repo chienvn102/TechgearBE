@@ -1,0 +1,42 @@
+# Ignore node_modules
+node_modules/
+
+# Ignore npm logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore environment files
+.env
+.env.local
+.env.*.local
+
+# Ignore test files
+tests/
+*.test.js
+
+# Ignore development files
+.git/
+.gitignore
+README.md
+*.md
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore temporary files
+tmp/
+temp/
+.DS_Store
+
+# Ignore scripts
+scripts/
+test-*.js
+fix-*.js

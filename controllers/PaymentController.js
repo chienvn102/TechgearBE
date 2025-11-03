@@ -4,6 +4,7 @@ const PaymentStatus = require('../models/PaymentStatus');
 const PayOSService = require('../services/PayOSService');
 const NotificationControllerV2 = require('./NotificationControllerV2');
 const auditLogger = require('../utils/auditLogger');
+const OrderCancellationService = require('../services/OrderCancellationService');
 
 /**
  * Payment Controller - Handle PayOS Payment Operations
@@ -441,7 +442,7 @@ class PaymentController {
   }
 
   /**
-   * Cancel Payment
+   * Cancel Payment and Order
    * POST /api/v1/payments/payos/cancel/:orderCode
    */
   async cancelPayment(req, res) {
@@ -499,14 +500,29 @@ class PaymentController {
       );
 
       if (!cancelResult.success) {
-        return res.status(400).json({
-          success: false,
-          message: cancelResult.error.message
-        });
+        // If PayOS cancellation fails, still proceed with local cancellation
+        console.warn('⚠️ PayOS cancellation failed, proceeding with local cancellation:', cancelResult.error);
       }
 
-      // Update transaction
-      await transaction.markAsCancelled(reason || 'Customer cancelled payment');
+      // 1. Update transaction status
+      await transaction.markAsCancelled(reason || 'Khách hàng hủy thanh toán');
+
+      // 2. Cancel the associated order and restore stock
+      let orderCancellationResult = null;
+      if (transaction.order_id) {
+        try {
+          orderCancellationResult = await OrderCancellationService.cancelOrder(
+            transaction.order_id,
+            reason || 'Khách hàng hủy thanh toán',
+            true // Send notification
+          );
+          
+          console.log('🚫 Order cancelled successfully:', orderCancellationResult);
+        } catch (cancelError) {
+          console.error('❌ Failed to cancel order:', cancelError);
+          // Continue even if order cancellation fails
+        }
+      }
 
       // Create audit log
       await auditLogger.createAuditLog({
@@ -517,22 +533,26 @@ class PaymentController {
         changes: {
           status: 'CANCELLED',
           cancelled_at: transaction.cancelled_at,
-          reason: reason
+          reason: reason,
+          order_cancelled: orderCancellationResult?.success || false
         }
       });
 
-      console.log('🚫 Payment cancelled:', {
+      console.log('🚫 Payment and order cancelled:', {
         transactionId: transaction.transaction_id,
-        orderCode: orderCode
+        orderCode: orderCode,
+        orderCancelled: orderCancellationResult?.success
       });
 
       return res.status(200).json({
         success: true,
-        message: 'Payment cancelled successfully',
+        message: 'Thanh toán và đơn hàng đã được hủy thành công',
         data: {
           transaction_id: transaction.transaction_id,
           status: transaction.status,
-          cancelled_at: transaction.cancelled_at
+          cancelled_at: transaction.cancelled_at,
+          order_cancelled: orderCancellationResult?.success || false,
+          order_details: orderCancellationResult?.order || null
         }
       });
     } catch (error) {

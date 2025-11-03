@@ -190,6 +190,13 @@ class AnalyticsController {
         }
       ]);
       
+      // Format timeline for frontend
+      const timeline = revenueTimeline.map(item => ({
+        date: item._id,
+        value: item.revenue,
+        orders: item.orders
+      }));
+      
       // 8. Revenue by Payment Method
       const revenueByPaymentMethod = await Order.aggregate([
         {
@@ -254,6 +261,141 @@ class AnalyticsController {
       throw error;
     }
   };
+  
+  
+  /**
+   * GET /api/v1/analytics/revenue/timeline
+   * Get revenue timeline with flexible filtering
+   * Query params:
+   * - viewType: 'day' | 'week' | 'month' | 'year'
+   * - specificDate: '2025-01-15' (for day view)
+   * - specificMonth: '2025-01' (for month view)
+   * - specificYear: '2025' (for year view)
+   */
+  static getRevenueTimeline = asyncHandler(async (req, res) => {
+    const { viewType = 'day', specificDate, specificMonth, specificYear } = req.query;
+    
+    let matchCondition = {};
+    let groupFormat = '';
+    let dateLabel = '';
+    
+    // Determine date range and grouping based on viewType
+    switch (viewType) {
+      case 'day': {
+        // View revenue by day
+        if (specificMonth && specificYear) {
+          // Show all days in specific month
+          const year = parseInt(specificYear);
+          const month = parseInt(specificMonth.split('-')[1]) - 1;
+          const start = new Date(year, month, 1);
+          const end = new Date(year, month + 1, 0, 23, 59, 59);
+          matchCondition = { order_datetime: { $gte: start, $lte: end } };
+          dateLabel = `Doanh thu tháng ${month + 1}/${year} (theo ngày)`;
+        } else if (specificYear) {
+          // Show all days in specific year
+          const year = parseInt(specificYear);
+          const start = new Date(year, 0, 1);
+          const end = new Date(year, 11, 31, 23, 59, 59);
+          matchCondition = { order_datetime: { $gte: start, $lte: end } };
+          dateLabel = `Doanh thu năm ${year} (theo ngày)`;
+        } else {
+          // Default: last 30 days
+          const start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          matchCondition = { order_datetime: { $gte: start } };
+          dateLabel = 'Doanh thu 30 ngày qua (theo ngày)';
+        }
+        groupFormat = '%Y-%m-%d';
+        break;
+      }
+      
+      case 'week': {
+        // View revenue by week
+        if (specificYear) {
+          const year = parseInt(specificYear);
+          const start = new Date(year, 0, 1);
+          const end = new Date(year, 11, 31, 23, 59, 59);
+          matchCondition = { order_datetime: { $gte: start, $lte: end } };
+          dateLabel = `Doanh thu năm ${year} (theo tuần)`;
+        } else {
+          // Default: current year
+          const currentYear = new Date().getFullYear();
+          const start = new Date(currentYear, 0, 1);
+          const end = new Date(currentYear, 11, 31, 23, 59, 59);
+          matchCondition = { order_datetime: { $gte: start, $lte: end } };
+          dateLabel = `Doanh thu năm ${currentYear} (theo tuần)`;
+        }
+        groupFormat = '%Y-W%U'; // Year-Week format
+        break;
+      }
+      
+      case 'month': {
+        // View revenue by month
+        if (specificYear) {
+          const year = parseInt(specificYear);
+          const start = new Date(year, 0, 1);
+          const end = new Date(year, 11, 31, 23, 59, 59);
+          matchCondition = { order_datetime: { $gte: start, $lte: end } };
+          dateLabel = `Doanh thu năm ${year} (theo tháng)`;
+        } else {
+          // Default: current year
+          const currentYear = new Date().getFullYear();
+          const start = new Date(currentYear, 0, 1);
+          const end = new Date(currentYear, 11, 31, 23, 59, 59);
+          matchCondition = { order_datetime: { $gte: start, $lte: end } };
+          dateLabel = `Doanh thu năm ${currentYear} (theo tháng)`;
+        }
+        groupFormat = '%Y-%m';
+        break;
+      }
+      
+      case 'year': {
+        // View revenue by year (all years)
+        matchCondition = {}; // No date filter - get all years
+        groupFormat = '%Y';
+        dateLabel = 'Doanh thu tất cả các năm';
+        break;
+      }
+      
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid viewType. Must be: day, week, month, or year'
+        });
+    }
+    
+    // Aggregate revenue data
+    const timeline = await Order.aggregate([
+      { $match: matchCondition },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: groupFormat, date: '$order_datetime' }
+          },
+          revenue: { $sum: '$order_total' },
+          orders: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+    
+    // Format response
+    const formattedTimeline = timeline.map(item => ({
+      date: item._id,
+      value: item.revenue,
+      orders: item.orders
+    }));
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        timeline: formattedTimeline,
+        viewType,
+        dateLabel,
+        totalRevenue: timeline.reduce((sum, item) => sum + item.revenue, 0),
+        totalOrders: timeline.reduce((sum, item) => sum + item.orders, 0)
+      }
+    });
+  });
   
   
   // ==================== ORDER ANALYTICS ====================

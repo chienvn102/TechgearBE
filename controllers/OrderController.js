@@ -693,8 +693,11 @@ class OrderController {
       });
     }
 
-    const order = await Order.findById(req.params.id)
-      .populate('customer_id', 'customer_id name email');
+    // Lấy order với đầy đủ thông tin
+    let order = await Order.findById(req.params.id)
+      .populate('customer_id', 'customer_id name email')
+      .populate('pm_id', 'pm_id pm_name')
+      .populate('payment_status_id', 'ps_id ps_name ps_description color_code');
     
     if (!order) {
       return res.status(404).json({
@@ -715,6 +718,30 @@ class OrderController {
         success: false,
         message: 'Order info not found'
       });
+    }
+
+    // AUTO-UPDATE PAYMENT STATUS FOR COD WHEN DELIVERED
+    // Khi giao hàng thành công với COD, tự động chuyển sang đã thanh toán
+    let paymentStatusUpdated = false;
+    if (of_state === 'DELIVERED' && order.pm_id) {
+      const paymentMethodName = order.pm_id.pm_name || '';
+      
+      // Check if payment method is COD
+      if (paymentMethodName.includes('COD') || paymentMethodName.includes('Khi nhận hàng')) {
+        console.log('💰 COD order delivered - Auto updating payment status to PAID');
+        
+        // Find PAID payment status
+        const paidStatus = await PaymentStatus.findOne({ ps_name: 'PAID' });
+        
+        if (paidStatus) {
+          order.payment_status_id = paidStatus._id;
+          await order.save();
+          paymentStatusUpdated = true;
+          console.log('✅ Payment status updated to PAID for COD order:', order.od_id);
+        } else {
+          console.warn('⚠️ PAID payment status not found in database');
+        }
+      }
     }
 
     // Create notification for order status change
@@ -749,10 +776,29 @@ class OrderController {
       );
     }
 
+    // Nếu có cập nhật payment status, lấy lại thông tin order mới nhất
+    if (paymentStatusUpdated) {
+      order = await Order.findById(order._id)
+        .populate('customer_id', 'customer_id name email')
+        .populate('pm_id', 'pm_id pm_name')
+        .populate('payment_status_id', 'ps_id ps_name ps_description color_code');
+    }
+
+    // Lấy lại toàn bộ thông tin order với đầy đủ populate
+    const updatedOrder = await Order.findById(order._id)
+      .populate('customer_id', 'customer_id name email phone_number')
+      .populate('po_id', 'po_id pd_id po_quantity po_price')
+      .populate('pm_id', 'pm_id pm_name pm_img')
+      .populate('payment_status_id', 'ps_id ps_name ps_description color_code')
+      .populate('voucher_id', 'voucher_id voucher_code voucher_name discount_percent discount_amount max_discount_amount');
+
     res.status(200).json({
       success: true,
       message: 'Order status updated successfully',
-      data: { orderInfo }
+      data: { 
+        order: updatedOrder,
+        orderInfo: orderInfo
+      }
     });
   });
 

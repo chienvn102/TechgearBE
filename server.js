@@ -106,6 +106,11 @@ const startServer = async () => {
     // Create indexes theo README_MongoDB.md
     await createIndexes();
     
+    // Start payment expiration job
+    const PaymentExpirationJob = require('./jobs/paymentExpirationJob');
+    PaymentExpirationJob.start();
+    console.log('✅ Payment expiration job initialized');
+    
     // Start server
     const PORT = config.PORT;
     const server = app.listen(PORT, () => {
@@ -145,6 +150,7 @@ const startServer = async () => {
     // Graceful shutdown
     process.on('SIGTERM', () => {
       console.log('SIGTERM received, shutting down gracefully...');
+      PaymentExpirationJob.stop();
       io.close();
       server.close(() => {
         console.log('Process terminated');
@@ -154,6 +160,7 @@ const startServer = async () => {
 
     process.on('SIGINT', () => {
       console.log('SIGINT received, shutting down gracefully...');
+      PaymentExpirationJob.stop();
       io.close();
       server.close(() => {
         console.log('Process terminated');
