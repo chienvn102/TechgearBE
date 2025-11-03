@@ -42,18 +42,25 @@ const corsOptions = {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    // In production, replace with actual frontend domains
+    // Get allowed origins from environment variable or use defaults
+    const envOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [];
+    
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:5000',  // Frontend running on port 5000
       'http://127.0.0.1:3000',
-      'http://127.0.0.1:5000'   // Alternative localhost format
+      'http://127.0.0.1:5000',   // Alternative localhost format
+      ...envOrigins  // Add production origins from environment
     ];
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Allow all Vercel preview deployments (*.vercel.app)
+    const isVercelDomain = origin.endsWith('.vercel.app');
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || isVercelDomain) {
       callback(null, true);
     } else {
+      console.warn(`⚠️ CORS blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
