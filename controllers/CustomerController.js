@@ -351,9 +351,9 @@ class CustomerController {
 
     const newAddress = new CustomerAddress({
       customer_id: customer._id,
-      name,
-      phone_number,
-      address
+      ca_name: name,
+      ca_phone: phone_number,
+      ca_address: address
     });
 
     await newAddress.save();
@@ -389,9 +389,9 @@ class CustomerController {
 
     const { name, phone_number, address: addressText } = req.body;
 
-    if (name) address.name = name;
-    if (phone_number) address.phone_number = phone_number;
-    if (addressText) address.address = addressText;
+    if (name) address.ca_name = name;
+    if (phone_number) address.ca_phone = phone_number;
+    if (addressText) address.ca_address = addressText;
 
     await address.save();
 
@@ -554,6 +554,73 @@ class CustomerController {
       success: true,
       data: customerRanking,
       message: 'Customer ranking updated successfully'
+    });
+  });
+
+  // GET /api/v1/customers/addresses - Get current customer addresses
+  static getCurrentCustomerAddresses = asyncHandler(async (req, res) => {
+    const customerId = req.user.customer_id;
+
+    if (!customerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer ID not found in token'
+      });
+    }
+
+    const addresses = await CustomerAddress.find({ customer_id: customerId })
+      .sort({ is_default: -1, created_at: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        addresses,
+        total: addresses.length,
+        default_address: addresses.find(addr => addr.is_default) || null
+      }
+    });
+  });
+
+  // POST /api/v1/customers/addresses - Create current customer address
+  static createCurrentCustomerAddress = asyncHandler(async (req, res) => {
+    const customerId = req.user.customer_id;
+    const { name, phone_number, address, is_default } = req.body;
+
+    if (!customerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer ID not found in token'
+      });
+    }
+
+    // Check if this is the first address (should be default)
+    const existingCount = await CustomerAddress.countDocuments({ customer_id: customerId });
+    const shouldBeDefault = existingCount === 0 || is_default;
+
+    // If setting as default, unset other default addresses
+    if (shouldBeDefault) {
+      await CustomerAddress.updateMany(
+        { customer_id: customerId },
+        { is_default: false }
+      );
+    }
+
+    const newAddress = new CustomerAddress({
+      customer_id: customerId,
+      ca_name: name,
+      ca_phone: phone_number,
+      ca_address: address,
+      is_default: shouldBeDefault,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    await newAddress.save();
+
+    res.status(201).json({
+      success: true,
+      data: { address: newAddress },
+      message: 'Address created successfully'
     });
   });
 

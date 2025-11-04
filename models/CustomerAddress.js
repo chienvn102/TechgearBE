@@ -10,23 +10,35 @@ const customerAddressSchema = new mongoose.Schema({
     ref: 'Customer',
     required: true
   },
-  name: {
+  ca_name: {
     type: String,
     required: true,
     trim: true,
     maxlength: 100
   },
-  phone_number: {
+  ca_phone: {
     type: String,
     required: true,
     trim: true,
     match: [/^[0-9]{10,11}$/, 'Số điện thoại phải có 10-11 chữ số']
   },
-  address: {
+  ca_address: {
     type: String,
     required: true,
     trim: true,
     maxlength: 500
+  },
+  is_default: {
+    type: Boolean,
+    default: false
+  },
+  created_at: {
+    type: Date,
+    default: Date.now
+  },
+  updated_at: {
+    type: Date,
+    default: Date.now
   }
 }, {
   collection: 'customer_address', // Tên collection chính xác theo rule
