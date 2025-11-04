@@ -8,6 +8,18 @@ const CustomerAddress = require('../models/CustomerAddress');
 const Order = require('../models/Order');
 const mongoose = require('mongoose');
 
+// Helper function to transform address object with frontend-friendly fields
+const transformAddress = (address) => {
+  if (!address) return null;
+  const obj = address.toObject ? address.toObject() : address;
+  return {
+    ...obj,
+    name: obj.ca_name,
+    phone_number: obj.ca_phone,
+    address: obj.ca_address
+  };
+};
+
 class CustomerController {
   // GET /api/v1/customers - Get all customers
   static getAllCustomers = asyncHandler(async (req, res) => {
@@ -90,7 +102,7 @@ class CustomerController {
           ...customer.toObject(),
           total_orders: stats.totalOrders,
           total_spent: stats.totalSpent,
-          addresses: addresses
+          addresses: addresses.map(transformAddress)
         }
       }
     });
@@ -281,7 +293,7 @@ class CustomerController {
 
     res.status(200).json({
       success: true,
-      data: addresses
+      data: addresses.map(transformAddress)
     });
   });
 
@@ -377,7 +389,7 @@ class CustomerController {
 
     res.status(200).json({
       success: true,
-      data: address,
+      data: transformAddress(address),
       message: 'Address updated successfully'
     });
   });
@@ -551,13 +563,7 @@ class CustomerController {
     const addresses = await CustomerAddress.find({ customer_id: customerId })
       .sort({ is_default: -1, created_at: -1 });
 
-    // Transform addresses to include both ca_* fields and frontend-friendly fields
-    const transformedAddresses = addresses.map(addr => ({
-      ...addr.toObject(),
-      name: addr.ca_name,
-      phone_number: addr.ca_phone,
-      address: addr.ca_address
-    }));
+    const transformedAddresses = addresses.map(transformAddress);
 
     res.status(200).json({
       success: true,
@@ -607,7 +613,7 @@ class CustomerController {
 
     res.status(201).json({
       success: true,
-      data: { address: newAddress },
+      data: { address: transformAddress(newAddress) },
       message: 'Address created successfully'
     });
   });
@@ -644,7 +650,7 @@ class CustomerController {
 
     res.status(200).json({
       success: true,
-      data: { address },
+      data: { address: transformAddress(address) },
       message: 'Address updated successfully'
     });
   });
@@ -704,7 +710,7 @@ class CustomerController {
 
     res.status(200).json({
       success: true,
-      data: { address },
+      data: { address: transformAddress(address) },
       message: 'Default address updated successfully'
     });
   });
