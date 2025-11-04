@@ -43,6 +43,7 @@ const cartRoutes = require('./cartRoutes'); // NEW: Cart functionality
 const uploadRoutes = require('./upload'); // Full upload functionality with Cloudinary
 const analyticsRoutes = require('./analyticsRoutes'); // NEW: Analytics & Dashboard Statistics
 const paymentRoutes = require('./payment.routes'); // NEW: PayOS Payment Integration
+const addressRoutes = require('./addressRoutes'); // NEW: Vietnam Address API Proxy
 
 // API prefix từ config
 const { API_PREFIX } = require('../config');
@@ -163,6 +164,7 @@ router.use('/cart', cartRoutes); // NEW: Cart functionality
 router.use('/upload', uploadRoutes); // NEW: File upload functionality
 router.use('/analytics', analyticsRoutes); // NEW: Analytics & Dashboard Statistics
 router.use('/payments', paymentRoutes); // NEW: PayOS Payment Integration
+router.use('/address', addressRoutes); // NEW: Vietnam Address API Proxy
 
 
 
