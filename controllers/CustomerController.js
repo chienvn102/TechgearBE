@@ -266,26 +266,6 @@ class CustomerController {
     });
   });
 
-  // GET /api/v1/customers/addresses - Get current customer addresses
-  static getCurrentCustomerAddresses = asyncHandler(async (req, res) => {
-    const customerId = req.user.customer_id;
-    
-    if (!customerId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Customer ID not found in token'
-      });
-    }
-    
-    const addresses = await CustomerAddress.find({ customer_id: customerId })
-      .sort({ created_at: -1 });
-
-    res.status(200).json({
-      success: true,
-      data: { addresses }
-    });
-  });
-
   // GET /api/v1/customers/:id/addresses - Get customer addresses
   static getCustomerAddresses = asyncHandler(async (req, res) => {
     const customer = await Customer.findById(req.params.id);
@@ -571,12 +551,20 @@ class CustomerController {
     const addresses = await CustomerAddress.find({ customer_id: customerId })
       .sort({ is_default: -1, created_at: -1 });
 
+    // Transform addresses to include both ca_* fields and frontend-friendly fields
+    const transformedAddresses = addresses.map(addr => ({
+      ...addr.toObject(),
+      name: addr.ca_name,
+      phone_number: addr.ca_phone,
+      address: addr.ca_address
+    }));
+
     res.status(200).json({
       success: true,
       data: {
-        addresses,
-        total: addresses.length,
-        default_address: addresses.find(addr => addr.is_default) || null
+        addresses: transformedAddresses,
+        total: transformedAddresses.length,
+        default_address: transformedAddresses.find(addr => addr.is_default) || null
       }
     });
   });
